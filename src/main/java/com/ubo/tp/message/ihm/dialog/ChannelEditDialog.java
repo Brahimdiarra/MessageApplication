@@ -12,9 +12,12 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Dialogue de modification d'un canal :
- * - Le créateur peut ajouter / retirer des membres (CHN-007, CHN-087)
- * - Un membre non-créateur peut quitter le canal (CHN-005)
+ * Dialogue de modification d'un canal.
+ *
+ * Règles :
+ *  - Créateur d'un canal PUBLIC  → peut renommer le canal uniquement
+ *  - Créateur d'un canal PRIVÉ   → peut renommer + ajouter/retirer des membres
+ *  - Membre non-créateur (privé) → peut seulement quitter le canal
  *
  * @author BRAHIM
  */
@@ -24,13 +27,9 @@ public class ChannelEditDialog extends JDialog {
     private DataManager dataManager;
     private User currentUser;
 
-    /**
-     * Constructeur.
-     *
-     * @param parent      Fenêtre parente
-     * @param channel     Canal à modifier
-     * @param dataManager Gestionnaire de données
-     */
+    // Champ de renommage (visible seulement pour le créateur)
+    private JTextField nameField;
+
     public ChannelEditDialog(Frame parent, Channel channel, DataManager dataManager) {
         super(parent, "Modifier le canal #" + channel.getName(), true);
         this.channel = channel;
@@ -39,19 +38,19 @@ public class ChannelEditDialog extends JDialog {
         initComponents();
     }
 
-    /**
-     * Initialisation des composants selon le rôle de l'utilisateur connecté.
-     */
     private void initComponents() {
-        setSize(520, 400);
         setLocationRelativeTo(getParent());
         setResizable(false);
         setLayout(new BorderLayout(10, 10));
 
-        // En-tête : infos du canal
-        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
         boolean isPrivate = !channel.getUsers().isEmpty();
+        boolean isCreator = channel.getCreator().getUuid().equals(currentUser.getUuid());
+        boolean isMember  = channel.getUsers().stream()
+                .anyMatch(u -> u.getUuid().equals(currentUser.getUuid()));
+
+        // ── EN-TÊTE : infos du canal ─────────────────────────────────────────
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
         String type = isPrivate ? "Privé" : "Public";
         headerPanel.add(new JLabel(
                 "<html><b>#" + channel.getName() + "</b>  |  Type : " + type
@@ -59,31 +58,32 @@ public class ChannelEditDialog extends JDialog {
         ));
         add(headerPanel, BorderLayout.NORTH);
 
-        // Déterminer le rôle de l'utilisateur connecté
-        boolean isCreator = channel.getCreator().getUuid().equals(currentUser.getUuid());
-        boolean isMember = channel.getUsers().stream()
-                .anyMatch(u -> u.getUuid().equals(currentUser.getUuid()));
-
+        // ── CENTRE : contenu selon le rôle ───────────────────────────────────
         JPanel centerPanel;
 
-        if (!isPrivate) {
-            // Canal public : pas de gestion de membres
-            centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            centerPanel.add(new JLabel("Ce canal est public. Tous les utilisateurs peuvent y accéder."));
-        } else if (isCreator) {
-            // Créateur : peut ajouter / retirer des membres
-            centerPanel = buildCreatorPanel();
+        if (isCreator) {
+            if (!isPrivate) {
+                // Canal public : renommage uniquement
+                setSize(420, 180);
+                centerPanel = buildRenameOnlyPanel();
+            } else {
+                // Canal privé : renommage + gestion des membres
+                setSize(540, 480);
+                centerPanel = buildCreatorPrivatePanel();
+            }
         } else if (isMember) {
-            // Membre non-créateur : peut seulement quitter
+            // Membre non-créateur : quitter seulement
+            setSize(420, 180);
             centerPanel = buildMemberPanel();
         } else {
+            setSize(420, 150);
             centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
             centerPanel.add(new JLabel("Vous n'êtes pas membre de ce canal privé."));
         }
 
         add(centerPanel, BorderLayout.CENTER);
 
-        // Bouton Fermer
+        // ── BAS : bouton Fermer ───────────────────────────────────────────────
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton closeButton = new JButton("Fermer");
         closeButton.addActionListener(e -> dispose());
@@ -92,13 +92,75 @@ public class ChannelEditDialog extends JDialog {
     }
 
     /**
-     * Construit le panel pour le créateur : deux listes (membres actuels + utilisateurs à ajouter).
+     * Canal PUBLIC + créateur : juste le champ de renommage.
      */
-    private JPanel buildCreatorPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 10, 0));
+    private JPanel buildRenameOnlyPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createTitledBorder("Renommer le canal"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Label
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.2;
+        panel.add(new JLabel("Nouveau nom :"), gbc);
+
+        // Champ texte pré-rempli avec le nom actuel
+        gbc.gridx = 1; gbc.weightx = 0.6;
+        nameField = new JTextField(channel.getName(), 15);
+        panel.add(nameField, gbc);
+
+        // Bouton Sauvegarder
+        gbc.gridx = 2; gbc.weightx = 0.2;
+        JButton saveButton = new JButton("Sauvegarder");
+        saveButton.addActionListener(e -> renameChannel());
+        panel.add(saveButton, gbc);
+
+        return panel;
+    }
+
+    /**
+     * Canal PRIVÉ + créateur : renommage en haut + gestion des membres en bas.
+     */
+    private JPanel buildCreatorPrivatePanel() {
+        JPanel panel = new JPanel(new BorderLayout(5, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
-        // --- Panneau gauche : membres actuels ---
+        // ─ Zone de renommage (haut) ─
+        JPanel renamePanel = new JPanel(new GridBagLayout());
+        renamePanel.setBorder(BorderFactory.createTitledBorder("Renommer le canal"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.2;
+        renamePanel.add(new JLabel("Nouveau nom :"), gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.6;
+        nameField = new JTextField(channel.getName(), 15);
+        renamePanel.add(nameField, gbc);
+
+        gbc.gridx = 2; gbc.weightx = 0.2;
+        JButton saveButton = new JButton("Sauvegarder");
+        saveButton.addActionListener(e -> renameChannel());
+        renamePanel.add(saveButton, gbc);
+
+        panel.add(renamePanel, BorderLayout.NORTH);
+
+        // ─ Zone de gestion des membres (bas) ─
+        panel.add(buildMembersManagementPanel(), BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    /**
+     * Les deux listes : membres actuels (retirer) + utilisateurs disponibles (ajouter).
+     */
+    private JPanel buildMembersManagementPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 2, 10, 0));
+        panel.setBorder(BorderFactory.createTitledBorder("Gestion des membres"));
+
+        // ─── Liste gauche : membres actuels ───
         JPanel membersPanel = new JPanel(new BorderLayout(5, 5));
         membersPanel.setBorder(BorderFactory.createTitledBorder("Membres actuels"));
 
@@ -107,16 +169,14 @@ public class ChannelEditDialog extends JDialog {
         membersList.setCellRenderer(new UserCellRenderer());
         membersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Remplir avec les membres (sauf le créateur, qui ne peut pas être retiré)
+        // Remplir — le créateur apparaît mais ne peut pas être retiré
         for (User u : channel.getUsers()) {
             if (!u.getUuid().equals(channel.getCreator().getUuid())) {
                 membersModel.addElement(u);
             }
         }
 
-        JScrollPane membersScroll = new JScrollPane(membersList);
-
-        JButton removeButton = new JButton("Retirer");
+        JButton removeButton = new JButton("◀ Retirer");
         removeButton.addActionListener(e -> {
             User selected = membersList.getSelectedValue();
             if (selected == null) {
@@ -126,24 +186,20 @@ public class ChannelEditDialog extends JDialog {
             }
             removeMember(selected);
             membersModel.removeElement(selected);
-            JOptionPane.showMessageDialog(this,
-                    "@" + selected.getUserTag() + " a été retiré du canal.",
-                    "Succès", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        membersPanel.add(membersScroll, BorderLayout.CENTER);
+        membersPanel.add(new JScrollPane(membersList), BorderLayout.CENTER);
         membersPanel.add(removeButton, BorderLayout.SOUTH);
 
-        // --- Panneau droit : utilisateurs disponibles à ajouter ---
+        // ─── Liste droite : utilisateurs disponibles ───
         JPanel availablePanel = new JPanel(new BorderLayout(5, 5));
-        availablePanel.setBorder(BorderFactory.createTitledBorder("Ajouter des membres"));
+        availablePanel.setBorder(BorderFactory.createTitledBorder("Utilisateurs à ajouter"));
 
         DefaultListModel<User> availableModel = new DefaultListModel<>();
         JList<User> availableList = new JList<>(availableModel);
         availableList.setCellRenderer(new UserCellRenderer());
         availableList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Remplir avec les utilisateurs qui ne sont PAS encore membres
         Set<User> allUsers = dataManager.getUsers();
         List<User> currentMembers = channel.getUsers();
         for (User u : allUsers) {
@@ -154,9 +210,7 @@ public class ChannelEditDialog extends JDialog {
             }
         }
 
-        JScrollPane availableScroll = new JScrollPane(availableList);
-
-        JButton addButton = new JButton("Ajouter");
+        JButton addButton = new JButton("Ajouter ▶");
         addButton.addActionListener(e -> {
             User selected = availableList.getSelectedValue();
             if (selected == null) {
@@ -165,15 +219,11 @@ public class ChannelEditDialog extends JDialog {
                 return;
             }
             addMember(selected);
-            // Déplacer l'utilisateur de la liste droite vers la liste gauche
             membersModel.addElement(selected);
             availableModel.removeElement(selected);
-            JOptionPane.showMessageDialog(this,
-                    "@" + selected.getUserTag() + " a été ajouté au canal.",
-                    "Succès", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        availablePanel.add(availableScroll, BorderLayout.CENTER);
+        availablePanel.add(new JScrollPane(availableList), BorderLayout.CENTER);
         availablePanel.add(addButton, BorderLayout.SOUTH);
 
         panel.add(membersPanel);
@@ -183,12 +233,11 @@ public class ChannelEditDialog extends JDialog {
     }
 
     /**
-     * Construit le panel pour un membre non-créateur : bouton "Quitter".
+     * Canal privé + membre non-créateur : bouton "Quitter".
      */
     private JPanel buildMemberPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 10, 30, 10));
-
         panel.add(new JLabel("Vous êtes membre de ce canal.    "));
 
         JButton leaveButton = new JButton("Quitter ce canal");
@@ -199,54 +248,71 @@ public class ChannelEditDialog extends JDialog {
         return panel;
     }
 
+    // ── Actions ──────────────────────────────────────────────────────────────
+
     /**
-     * Ajoute un membre au canal.
-     * Crée un nouveau Channel avec le même UUID mais la liste de membres mise à jour,
-     * puis écrit le fichier sur le disque (le WatchableDirectory notifiera la modification).
+     * Renomme le canal : crée un nouveau Channel avec le même UUID mais un nouveau nom.
      */
+    private void renameChannel() {
+        String newName = nameField.getText().trim();
+
+        if (newName.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Le nom ne peut pas être vide.", "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!newName.matches("[a-zA-Z0-9_-]+")) {
+            JOptionPane.showMessageDialog(this,
+                    "Le nom ne peut contenir que des lettres, chiffres, tirets et underscores.",
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (newName.equals(channel.getName())) {
+            JOptionPane.showMessageDialog(this,
+                    "Le nom est identique à l'actuel.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Créer un Channel avec le MÊME UUID + MÊME membres mais nouveau nom
+        Channel renamed = new Channel(
+                channel.getUuid(),
+                channel.getCreator(),
+                newName,
+                channel.getUsers()
+        );
+        dataManager.sendChannel(renamed);
+        this.channel = renamed;
+
+        // Mettre à jour le titre du dialogue
+        setTitle("Modifier le canal #" + newName);
+
+        JOptionPane.showMessageDialog(this,
+                "Canal renommé en \"#" + newName + "\" avec succès !",
+                "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+        System.out.println("[CHANNEL] Canal renommé : " + newName);
+    }
+
     private void addMember(User userToAdd) {
         List<User> newMembers = new ArrayList<>(channel.getUsers());
         newMembers.add(userToAdd);
-
-        // Créer un Channel mis à jour avec le MÊME UUID (écrasement du fichier existant)
-        Channel updatedChannel = new Channel(
-                channel.getUuid(),
-                channel.getCreator(),
-                channel.getName(),
-                newMembers
-        );
-        dataManager.sendChannel(updatedChannel);
-
-        // Mettre à jour la référence locale pour les opérations suivantes dans ce dialogue
-        this.channel = updatedChannel;
-
-        System.out.println("[CHANNEL] Membre ajouté : @" + userToAdd.getUserTag()
-                + " dans #" + channel.getName());
+        Channel updated = new Channel(channel.getUuid(), channel.getCreator(), channel.getName(), newMembers);
+        dataManager.sendChannel(updated);
+        this.channel = updated;
+        System.out.println("[CHANNEL] Membre ajouté : @" + userToAdd.getUserTag() + " dans #" + channel.getName());
     }
 
-    /**
-     * Retire un membre du canal.
-     */
     private void removeMember(User userToRemove) {
         List<User> newMembers = new ArrayList<>(channel.getUsers());
         newMembers.removeIf(u -> u.getUuid().equals(userToRemove.getUuid()));
-
-        Channel updatedChannel = new Channel(
-                channel.getUuid(),
-                channel.getCreator(),
-                channel.getName(),
-                newMembers
-        );
-        dataManager.sendChannel(updatedChannel);
-        this.channel = updatedChannel;
-
-        System.out.println("[CHANNEL] Membre retiré : @" + userToRemove.getUserTag()
-                + " de #" + channel.getName());
+        Channel updated = new Channel(channel.getUuid(), channel.getCreator(), channel.getName(), newMembers);
+        dataManager.sendChannel(updated);
+        this.channel = updated;
+        System.out.println("[CHANNEL] Membre retiré : @" + userToRemove.getUserTag() + " de #" + channel.getName());
     }
 
-    /**
-     * L'utilisateur connecté quitte le canal (non-créateur seulement).
-     */
     private void leaveChannel() {
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Voulez-vous vraiment quitter le canal \"#" + channel.getName() + "\" ?",
@@ -261,9 +327,8 @@ public class ChannelEditDialog extends JDialog {
         }
     }
 
-    /**
-     * Renderer pour afficher les utilisateurs dans les listes.
-     */
+    // ── Renderer ─────────────────────────────────────────────────────────────
+
     private class UserCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
@@ -277,9 +342,6 @@ public class ChannelEditDialog extends JDialog {
         }
     }
 
-    /**
-     * Méthode statique pour afficher le dialogue.
-     */
     public static void showDialog(Frame parent, Channel channel, DataManager dataManager) {
         ChannelEditDialog dialog = new ChannelEditDialog(parent, channel, dataManager);
         dialog.setVisible(true);
