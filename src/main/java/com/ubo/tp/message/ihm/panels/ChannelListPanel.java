@@ -12,9 +12,11 @@ import main.java.com.ubo.tp.message.ihm.dialog.ChannelEditDialog;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Panel d'affichage de la liste des canaux.
+ * Panel d'affichage de la liste des canaux avec barre de recherche (CHN-002).
  *
  * @author BRAHIM
  */
@@ -24,6 +26,10 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     private JList<Channel> channelList;
     private DataManager dataManager;
     private JLabel countLabel;
+    private JTextField searchField;
+
+    /** Liste complète de tous les canaux (avant filtre de recherche). */
+    private final List<Channel> allChannels = new ArrayList<>();
 
     /**
      * Constructeur.
@@ -120,6 +126,20 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         setLayout(new BorderLayout());
         setBorder(new TitledBorder("Canaux disponibles"));
 
+        // ── HAUT : barre de recherche ─────────────────────────────────────────
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        searchField = new JTextField();
+        searchField.setToolTipText("Rechercher un canal par nom");
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
+        });
+        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        add(searchPanel, BorderLayout.NORTH);
+
         channelListModel = new DefaultListModel<>();
         channelList = new JList<>(channelListModel);
         channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -175,6 +195,20 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
+     * Refiltre la liste affichée selon le texte dans le champ de recherche.
+     * On cherche dans le nom du canal (insensible à la casse).
+     */
+    private void applyFilter() {
+        String query = searchField.getText().trim().toLowerCase();
+        channelListModel.clear();
+        for (Channel c : allChannels) {
+            if (query.isEmpty() || c.getName().toLowerCase().contains(query)) {
+                channelListModel.addElement(c);
+            }
+        }
+    }
+
+    /**
      * Retourne le canal sélectionné.
      *
      * @return Le canal sélectionné ou null
@@ -185,32 +219,33 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
     @Override
     public void notifyChannelAdded(Channel addedChannel) {
-        System.out.println("[CHANNEL_LIST] Notification reçue : canal ajouté - " + addedChannel.getName());
-
         SwingUtilities.invokeLater(() -> {
-            if (!channelListModel.contains(addedChannel)) {
-                channelListModel.addElement(addedChannel);
-                System.out.println("[CHANNEL_LIST] Canal ajouté à la liste : " + addedChannel.getName());
-            } else {
-                System.out.println("[CHANNEL_LIST] Canal déjà présent dans la liste");
+            boolean exists = allChannels.stream().anyMatch(c -> c.getUuid().equals(addedChannel.getUuid()));
+            if (!exists) {
+                allChannels.add(addedChannel);
             }
+            applyFilter();
         });
     }
 
     @Override
     public void notifyChannelDeleted(Channel deletedChannel) {
         SwingUtilities.invokeLater(() -> {
-            channelListModel.removeElement(deletedChannel);
+            allChannels.removeIf(c -> c.getUuid().equals(deletedChannel.getUuid()));
+            applyFilter();
         });
     }
 
     @Override
     public void notifyChannelModified(Channel modifiedChannel) {
         SwingUtilities.invokeLater(() -> {
-            int index = channelListModel.indexOf(modifiedChannel);
-            if (index >= 0) {
-                channelListModel.set(index, modifiedChannel);
+            for (int i = 0; i < allChannels.size(); i++) {
+                if (allChannels.get(i).getUuid().equals(modifiedChannel.getUuid())) {
+                    allChannels.set(i, modifiedChannel);
+                    break;
+                }
             }
+            applyFilter();
         });
     }
 

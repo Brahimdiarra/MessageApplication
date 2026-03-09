@@ -11,7 +11,9 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,6 +29,13 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     private SimpleDateFormat dateFormat;
     private JLabel countLabel;
     private MessageApp messageApp;
+    private JTextField searchField;
+
+    /**
+     * Liste complète des messages pour le filtre actif (user ou canal sélectionné).
+     * On garde cette liste pour pouvoir refilter par texte sans reparcourir toute la DB.
+     */
+    private final List<Message> currentMessages = new ArrayList<>();
 
     /**
      * Constructeur.
@@ -52,6 +61,20 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     private void initComponents() {
         setLayout(new BorderLayout());
         setBorder(new TitledBorder("Messages"));
+
+        // ── HAUT : barre de recherche ─────────────────────────────────────────
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        searchField = new JTextField();
+        searchField.setToolTipText("Rechercher dans les messages (texte ou @auteur)");
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { applySearch(); }
+        });
+        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        add(searchPanel, BorderLayout.NORTH);
 
         // Modèle de liste
         messageListModel = new DefaultListModel<>();
@@ -107,7 +130,24 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * Efface tous les messages affichés.
      */
     public void clearMessages() {
+        currentMessages.clear();
         messageListModel.clear();
+    }
+
+    /**
+     * Refiltre la liste affichée selon le texte dans le champ de recherche.
+     * Cherche dans le texte du message ET dans le tag de l'auteur.
+     */
+    private void applySearch() {
+        String query = searchField.getText().trim().toLowerCase();
+        messageListModel.clear();
+        for (Message m : currentMessages) {
+            if (query.isEmpty()
+                    || m.getText().toLowerCase().contains(query)
+                    || m.getSender().getUserTag().toLowerCase().contains(query)) {
+                messageListModel.addElement(m);
+            }
+        }
     }
 
     /**
@@ -116,29 +156,26 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * @param userUuid UUID de l'utilisateur
      */
     public void filterByUser(UUID userUuid) {
-        messageListModel.clear();
+        currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
             Set<Message> allMessages = messageApp.getmDataManager().getMessages();
             User currentUser = SessionManager.getInstance().getCurrentUser();
 
             for (Message message : allMessages) {
-                // Messages de la conversation entre currentUser et userUuid
                 if (currentUser != null) {
-                    // Messages envoyés PAR currentUser À userUuid
-                    boolean sentToUser = message.getSender().getUuid().equals(currentUser.getUuid()) &&
-                            message.getRecipient().equals(userUuid);
-
-                    // Messages envoyés PAR userUuid À currentUser
-                    boolean receivedFromUser = message.getSender().getUuid().equals(userUuid) &&
-                            message.getRecipient().equals(currentUser.getUuid());
+                    boolean sentToUser = message.getSender().getUuid().equals(currentUser.getUuid())
+                            && message.getRecipient().equals(userUuid);
+                    boolean receivedFromUser = message.getSender().getUuid().equals(userUuid)
+                            && message.getRecipient().equals(currentUser.getUuid());
 
                     if (sentToUser || receivedFromUser) {
-                        messageListModel.addElement(message);
+                        currentMessages.add(message);
                     }
                 }
             }
         }
+        applySearch(); // applique aussi le filtre texte en cours
     }
 
     /**
@@ -147,40 +184,44 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * @param channelUuid UUID du canal
      */
     public void filterByChannel(UUID channelUuid) {
-        messageListModel.clear();
+        currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
             Set<Message> allMessages = messageApp.getmDataManager().getMessages();
-
             for (Message message : allMessages) {
-                // Messages envoyés AU canal
                 if (message.getRecipient().equals(channelUuid)) {
-                    messageListModel.addElement(message);
+                    currentMessages.add(message);
                 }
             }
         }
+        applySearch();
     }
 
     /**
      * Affiche tous les messages sans filtre.
      */
     public void showAllMessages() {
-        messageListModel.clear();
+        currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
-            Set<Message> allMessages = messageApp.getmDataManager().getMessages();
-            for (Message message : allMessages) {
-                messageListModel.addElement(message);
-            }
+            currentMessages.addAll(messageApp.getmDataManager().getMessages());
         }
+        applySearch();
     }
 
     @Override
     public void notifyMessageAdded(Message addedMessage) {
         SwingUtilities.invokeLater(() -> {
-            if (!messageListModel.contains(addedMessage)) {
-                messageListModel.addElement(addedMessage);
-                // Auto-scroll vers le dernier message
+            // Ajouter aux messages courants si pas déjà présent
+            boolean exists = currentMessages.stream()
+                    .anyMatch(m -> m.getUuid().equals(addedMessage.getUuid()));
+            if (!exists) {
+                currentMessages.add(addedMessage);
+            }
+            // Reappliquer le filtre texte pour décider si on l'affiche
+            applySearch();
+            // Auto-scroll vers le dernier message visible
+            if (messageListModel.getSize() > 0) {
                 messageList.ensureIndexIsVisible(messageListModel.getSize() - 1);
             }
         });

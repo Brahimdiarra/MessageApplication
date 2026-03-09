@@ -8,9 +8,11 @@ import main.java.com.ubo.tp.message.datamodel.User;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Panel d'affichage de la liste des utilisateurs.
+ * Panel d'affichage de la liste des utilisateurs avec barre de recherche (USR-008).
  *
  * @author BRAHIM
  */
@@ -18,67 +20,80 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
 
     private DefaultListModel<User> userListModel;
     private JList<User> userList;
+    private JLabel countLabel;
+    private JTextField searchField;
 
     /**
-     * Constructeur.
+     * Liste complète de tous les utilisateurs reçus (avant filtre de recherche).
+     * On garde cette liste séparée pour pouvoir refilter à chaque frappe
+     * sans perdre les éléments qui ne correspondent pas au filtre actuel.
      */
+    private final List<User> allUsers = new ArrayList<>();
+
     public UserListPanel() {
         initComponents();
     }
 
-    /**
-     * Initialisation des composants.
-     */
     private void initComponents() {
         setLayout(new BorderLayout());
         setBorder(new TitledBorder("Utilisateurs connectés"));
 
-        // Modèle de liste
-        userListModel = new DefaultListModel<>();
+        // ── HAUT : barre de recherche ─────────────────────────────────────────
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        searchField = new JTextField();
+        searchField.setToolTipText("Rechercher un utilisateur (@tag ou nom)");
+        // Hint visuel en placeholder
+        searchField.putClientProperty("JTextField.placeholderText", "🔍 Rechercher...");
 
-        // Liste des utilisateurs
+        // À chaque frappe, on refiltre la liste
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
+        });
+
+        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        add(searchPanel, BorderLayout.NORTH);
+
+        // ── CENTRE : liste des utilisateurs ──────────────────────────────────
+        userListModel = new DefaultListModel<>();
         userList = new JList<>(userListModel);
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         userList.setCellRenderer(new UserListCellRenderer());
+        add(new JScrollPane(userList), BorderLayout.CENTER);
 
-        // ScrollPane pour la liste
-        JScrollPane scrollPane = new JScrollPane(userList);
-        add(scrollPane, BorderLayout.CENTER);
-
-        // Panel d'information en bas
+        // ── BAS : compteur ────────────────────────────────────────────────────
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel countLabel = new JLabel("0 utilisateur(s)");
+        countLabel = new JLabel("0 utilisateur(s)");
         infoPanel.add(countLabel);
         add(infoPanel, BorderLayout.SOUTH);
 
-        // Mise à jour du compteur quand la liste change
         userListModel.addListDataListener(new javax.swing.event.ListDataListener() {
-            @Override
-            public void intervalAdded(javax.swing.event.ListDataEvent e) {
-                updateCount();
-            }
-
-            @Override
-            public void intervalRemoved(javax.swing.event.ListDataEvent e) {
-                updateCount();
-            }
-
-            @Override
-            public void contentsChanged(javax.swing.event.ListDataEvent e) {
-                updateCount();
-            }
-
-            private void updateCount() {
-                countLabel.setText(userListModel.getSize() + " utilisateur(s)");
-            }
+            public void intervalAdded(javax.swing.event.ListDataEvent e)   { updateCount(); }
+            public void intervalRemoved(javax.swing.event.ListDataEvent e) { updateCount(); }
+            public void contentsChanged(javax.swing.event.ListDataEvent e) { updateCount(); }
+            private void updateCount() { countLabel.setText(userListModel.getSize() + " utilisateur(s)"); }
         });
     }
 
     /**
-     * Retourne l'utilisateur sélectionné.
-     *
-     * @return L'utilisateur sélectionné ou null
+     * Refiltre la liste affichée selon le texte dans le champ de recherche.
+     * On cherche dans le tag ET le nom de l'utilisateur (insensible à la casse).
      */
+    private void applyFilter() {
+        String query = searchField.getText().trim().toLowerCase();
+        userListModel.clear();
+        for (User u : allUsers) {
+            if (query.isEmpty()
+                    || u.getUserTag().toLowerCase().contains(query)
+                    || u.getName().toLowerCase().contains(query)) {
+                userListModel.addElement(u);
+            }
+        }
+    }
+
     public User getSelectedUser() {
         return userList.getSelectedValue();
     }
@@ -86,84 +101,59 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     @Override
     public void notifyUserAdded(User addedUser) {
         SwingUtilities.invokeLater(() -> {
-            if (!userListModel.contains(addedUser)) {
-                userListModel.addElement(addedUser);
+            // Ajouter à la liste complète si pas déjà présent
+            boolean exists = allUsers.stream().anyMatch(u -> u.getUuid().equals(addedUser.getUuid()));
+            if (!exists) {
+                allUsers.add(addedUser);
             }
+            applyFilter(); // refilter pour mettre à jour l'affichage
         });
     }
 
     @Override
     public void notifyUserDeleted(User deletedUser) {
         SwingUtilities.invokeLater(() -> {
-            userListModel.removeElement(deletedUser);
+            allUsers.removeIf(u -> u.getUuid().equals(deletedUser.getUuid()));
+            applyFilter();
         });
     }
 
     @Override
     public void notifyUserModified(User modifiedUser) {
         SwingUtilities.invokeLater(() -> {
-            int index = userListModel.indexOf(modifiedUser);
-            if (index >= 0) {
-                userListModel.set(index, modifiedUser);
+            // Remplacer dans la liste complète
+            for (int i = 0; i < allUsers.size(); i++) {
+                if (allUsers.get(i).getUuid().equals(modifiedUser.getUuid())) {
+                    allUsers.set(i, modifiedUser);
+                    break;
+                }
             }
+            applyFilter();
         });
     }
 
-    @Override
-    public void notifyMessageAdded(Message addedMessage) {
-        // Non utilisé dans ce panel
-    }
+    @Override public void notifyMessageAdded(Message m)    { /* Non utilisé */ }
+    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
+    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
+    @Override public void notifyChannelAdded(Channel c)    { /* Non utilisé */ }
+    @Override public void notifyChannelDeleted(Channel c)  { /* Non utilisé */ }
+    @Override public void notifyChannelModified(Channel c) { /* Non utilisé */ }
 
-    @Override
-    public void notifyMessageDeleted(Message deletedMessage) {
-        // Non utilisé dans ce panel
-    }
-
-    @Override
-    public void notifyMessageModified(Message modifiedMessage) {
-        // Non utilisé dans ce panel
-    }
-
-    @Override
-    public void notifyChannelAdded(Channel addedChannel) {
-        // Non utilisé dans ce panel
-    }
-
-    @Override
-    public void notifyChannelDeleted(Channel deletedChannel) {
-        // Non utilisé dans ce panel
-    }
-
-    @Override
-    public void notifyChannelModified(Channel modifiedChannel) {
-        // Non utilisé dans ce panel
-    }
-
-    /**
-     * Renderer personnalisé pour les utilisateurs.
-     */
     private class UserListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
             if (value instanceof User) {
                 User user = (User) value;
                 String statusIcon = user.isOnline() ? "🟢" : "⚫";
                 setText(statusIcon + " @" + user.getUserTag() + " (" + user.getName() + ")");
                 setToolTipText("UUID: " + user.getUuid());
             }
-
             return this;
         }
     }
 
-    /**
-     * Ajoute un listener pour détecter la sélection d'un utilisateur.
-     *
-     * @param listener Le listener à ajouter
-     */
     public void addSelectionListener(javax.swing.event.ListSelectionListener listener) {
         userList.addListSelectionListener(listener);
     }
