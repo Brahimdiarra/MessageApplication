@@ -82,7 +82,7 @@ public class Database implements IDatabase {
 	 *
 	 * @param messageToRemove
 	 */
-	protected void deleteMessage(Message messageToRemove) {
+	public void deleteMessage(Message messageToRemove) {
 		// Suppression du message
 		this.mMessages.remove(messageToRemove);
 

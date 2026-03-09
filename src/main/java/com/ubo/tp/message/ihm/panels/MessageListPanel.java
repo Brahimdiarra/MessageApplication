@@ -1,5 +1,6 @@
 package main.java.com.ubo.tp.message.ihm.panels;
 
+import main.java.com.ubo.tp.message.core.DataManager;
 import main.java.com.ubo.tp.message.core.SessionManager;
 import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
@@ -29,6 +30,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     private SimpleDateFormat dateFormat;
     private JLabel countLabel;
     private MessageApp messageApp;
+    private DataManager dataManager;
     private JTextField searchField;
 
     /**
@@ -53,6 +55,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     public void setMessageApp(MessageApp messageApp) {
         this.messageApp = messageApp;
+        this.dataManager = messageApp != null ? messageApp.getmDataManager() : null;
     }
 
     /**
@@ -88,11 +91,20 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         JScrollPane scrollPane = new JScrollPane(messageList);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Panel d'information en bas
+        // Panel du bas : compteur + bouton supprimer
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         countLabel = new JLabel("0 message(s)");
         infoPanel.add(countLabel);
-        add(infoPanel, BorderLayout.SOUTH);
+
+        JButton deleteButton = new JButton("🗑 Supprimer");
+        deleteButton.setToolTipText("Supprimer mon message sélectionné (MSG-006)");
+        deleteButton.addActionListener(e -> deleteSelectedMessage());
+
+        bottomPanel.add(infoPanel, BorderLayout.WEST);
+        bottomPanel.add(deleteButton, BorderLayout.EAST);
+        add(bottomPanel, BorderLayout.SOUTH);
 
         // Mise à jour du compteur
         messageListModel.addListDataListener(new javax.swing.event.ListDataListener() {
@@ -124,6 +136,37 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     public Message getSelectedMessage() {
         return messageList.getSelectedValue();
+    }
+
+    /**
+     * Supprime le message sélectionné si l'utilisateur connecté en est l'auteur (MSG-006).
+     */
+    private void deleteSelectedMessage() {
+        Message selected = getSelectedMessage();
+
+        if (selected == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Sélectionnez un message à supprimer.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser == null || !selected.getSender().getUuid().equals(currentUser.getUuid())) {
+            JOptionPane.showMessageDialog(this,
+                    "Vous ne pouvez supprimer que vos propres messages.",
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Supprimer ce message ?",
+                "Confirmation", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            dataManager.deleteMessage(selected);
+            System.out.println("[MESSAGE] Message supprimé : " + selected.getUuid());
+        }
     }
 
     /**
@@ -230,6 +273,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     @Override
     public void notifyMessageDeleted(Message deletedMessage) {
         SwingUtilities.invokeLater(() -> {
+            currentMessages.removeIf(m -> m.getUuid().equals(deletedMessage.getUuid()));
             messageListModel.removeElement(deletedMessage);
         });
     }

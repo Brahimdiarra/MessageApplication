@@ -424,6 +424,24 @@ public class EntityManager implements IWatchableDirectoryObserver {
 	}
 
 	/**
+	 * Suppression du fichier correspondant à un message.
+	 * Le WatchableDirectory détectera la suppression et retirera le message de la DB.
+	 *
+	 * @param message Message à supprimer
+	 */
+	public void deleteMessageFile(Message message) {
+		if (mDirectoryPath != null) {
+			String fileName = mDataFileManager.getFileName(message.getUuid(), Constants.MESSAGE_FILE_EXTENSION);
+			File messageFile = new File(fileName);
+			if (messageFile.exists()) {
+				messageFile.delete();
+			}
+		} else {
+			throw new RuntimeException("Le répertoire d'échange n'est pas configuré !");
+		}
+	}
+
+	/**
 	 * Génération du fichier correspondant au message.
 	 *
 	 * @param message

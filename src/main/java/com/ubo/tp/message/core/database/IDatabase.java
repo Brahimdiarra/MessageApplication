@@ -33,9 +33,14 @@ public interface IDatabase {
 	void addUser(User user);
 
 	/**
-	 * supprime un channel à la base de données.
+	 * Supprime un canal de la base de données.
 	 */
 	void deleteChannel(Channel channel);
+
+	/**
+	 * Supprime un message de la base de données.
+	 */
+	void deleteMessage(Message message);
 
 	/**
 	 * Retourne la liste des utilisateurs.

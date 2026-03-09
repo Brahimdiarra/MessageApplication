@@ -127,6 +127,16 @@ public class DataManager {
 	}
 
 	/**
+	 * Supprime un message.
+	 * Supprime le fichier sur le disque — le WatchableDirectory notifie la DB automatiquement.
+	 *
+	 * @param message Message à supprimer
+	 */
+	public void deleteMessage(Message message) {
+		this.mEntityManager.deleteMessageFile(message);
+	}
+
+	/**
 	 * Ecrit un Utilisateur.
 	 *
 	 * @param user

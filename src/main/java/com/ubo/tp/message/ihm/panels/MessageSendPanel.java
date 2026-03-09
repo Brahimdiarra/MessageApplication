@@ -1,6 +1,7 @@
 package main.java.com.ubo.tp.message.ihm.panels;
 
 import main.java.com.ubo.tp.message.core.DataManager;
+import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
@@ -19,7 +20,7 @@ import java.util.UUID;
  *
  * @author BRAHIM
  */
-public class MessageSendPanel extends JPanel {
+public class MessageSendPanel extends JPanel implements IDatabaseObserver {
 
     private JTextArea messageTextArea;
     private JButton sendButton;
