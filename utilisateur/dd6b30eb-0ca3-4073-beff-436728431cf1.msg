@@ -1,0 +1,7 @@
+#
+#Mon Mar 09 17:22:35 CET 2026
+Date=1773073355964
+Sender=2efea7e9-d4f2-43eb-b20d-11589817211d
+Text=test
+Recipient=202c78cc-ad17-4269-9918-cf1028491288
+UUID=dd6b30eb-0ca3-4073-beff-436728431cf1

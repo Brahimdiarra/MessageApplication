@@ -1,0 +1,7 @@
+#
+#Mon Mar 09 17:20:47 CET 2026
+Date=1773073247942
+Sender=2efea7e9-d4f2-43eb-b20d-11589817211d
+Text=salut
+Recipient=08b4ef7f-5eb4-4634-8a89-75bd09f7e6ef
+UUID=2f33cf71-499b-481d-aa59-442f75e9626b

@@ -39,6 +39,12 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private final List<Message> currentMessages = new ArrayList<>();
 
+    /** Type de filtre actif : "all", "channel", "user". */
+    private String currentFilterType = "all";
+
+    /** UUID du canal ou utilisateur filtré (null si filterType == "all"). */
+    private UUID currentFilterUuid = null;
+
     /**
      * Constructeur.
      */
@@ -199,6 +205,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * @param userUuid UUID de l'utilisateur
      */
     public void filterByUser(UUID userUuid) {
+        currentFilterType = "user";
+        currentFilterUuid = userUuid;
         currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
@@ -227,6 +235,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * @param channelUuid UUID du canal
      */
     public void filterByChannel(UUID channelUuid) {
+        currentFilterType = "channel";
+        currentFilterUuid = channelUuid;
         currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
@@ -244,6 +254,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * Affiche tous les messages sans filtre.
      */
     public void showAllMessages() {
+        currentFilterType = "all";
+        currentFilterUuid = null;
         currentMessages.clear();
 
         if (messageApp != null && messageApp.getmDataManager() != null) {
@@ -255,6 +267,25 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     @Override
     public void notifyMessageAdded(Message addedMessage) {
         SwingUtilities.invokeLater(() -> {
+            // Vérifier si le message correspond au filtre actif
+            boolean matchesFilter = false;
+            if ("all".equals(currentFilterType)) {
+                matchesFilter = true;
+            } else if ("channel".equals(currentFilterType) && currentFilterUuid != null) {
+                matchesFilter = addedMessage.getRecipient().equals(currentFilterUuid);
+            } else if ("user".equals(currentFilterType) && currentFilterUuid != null) {
+                User currentUser = main.java.com.ubo.tp.message.core.SessionManager.getInstance().getCurrentUser();
+                if (currentUser != null) {
+                    boolean sentToUser = addedMessage.getSender().getUuid().equals(currentUser.getUuid())
+                            && addedMessage.getRecipient().equals(currentFilterUuid);
+                    boolean receivedFromUser = addedMessage.getSender().getUuid().equals(currentFilterUuid)
+                            && addedMessage.getRecipient().equals(currentUser.getUuid());
+                    matchesFilter = sentToUser || receivedFromUser;
+                }
+            }
+
+            if (!matchesFilter) return;
+
             // Ajouter aux messages courants si pas déjà présent
             boolean exists = currentMessages.stream()
                     .anyMatch(m -> m.getUuid().equals(addedMessage.getUuid()));

@@ -38,6 +38,7 @@ public class MessageAppMainView extends JFrame {
     private UserListPanel userListPanel;
     private ChannelListPanel channelListPanel;
     private MessageListPanel messageListPanel;
+    private MessageSendPanel sendPanel;
 
     /**
      * Constructeur.
@@ -125,6 +126,9 @@ public class MessageAppMainView extends JFrame {
             database.addObserver(userListPanel);
             database.addObserver(channelListPanel);
             database.addObserver(messageListPanel);
+            if (sendPanel != null) {
+                database.addObserver(sendPanel);
+            }
             System.out.println("[INFO] Observateurs IHM enregistrés avec succès");
         } else {
             System.err.println("[ERREUR] Database null - impossible d'enregistrer les observateurs");
@@ -448,7 +452,7 @@ public class MessageAppMainView extends JFrame {
 
         // AJOUTER LE PANEL D'ENVOI ICI
         if (messageApp != null && messageApp.mDataManager != null) {
-            MessageSendPanel sendPanel = new MessageSendPanel(messageApp.mDataManager);
+            sendPanel = new MessageSendPanel(messageApp.mDataManager);
             sendPanel.setPreferredSize(new Dimension(0, 150));
             centerPanel.add(sendPanel, BorderLayout.SOUTH);
         }

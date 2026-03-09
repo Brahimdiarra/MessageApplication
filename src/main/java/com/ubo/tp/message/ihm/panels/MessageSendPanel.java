@@ -267,6 +267,42 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         }
     }
 
+    // ── IDatabaseObserver : rafraîchit la liste des destinataires à chaque changement ──
+
+    @Override
+    public void notifyChannelAdded(Channel addedChannel) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override
+    public void notifyChannelDeleted(Channel deletedChannel) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override
+    public void notifyChannelModified(Channel modifiedChannel) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override
+    public void notifyUserAdded(User addedUser) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override
+    public void notifyUserDeleted(User deletedUser) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override
+    public void notifyUserModified(User modifiedUser) {
+        SwingUtilities.invokeLater(this::loadRecipients);
+    }
+
+    @Override public void notifyMessageAdded(Message m)    { /* Non utilisé */ }
+    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
+    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
+
     /**
      * Renderer personnalisé pour la liste déroulante des destinataires.
      */
