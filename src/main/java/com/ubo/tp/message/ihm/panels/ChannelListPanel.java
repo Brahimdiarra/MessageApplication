@@ -7,6 +7,7 @@ import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
 import main.java.com.ubo.tp.message.ihm.dialog.ChannelCreationDialog;
+import main.java.com.ubo.tp.message.ihm.dialog.ChannelEditDialog;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -55,6 +56,30 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
         // Afficher le dialogue
         ChannelCreationDialog.showDialog(parentFrame, dataManager);
+    }
+
+    /**
+     * Ouvre le dialogue de modification du canal sélectionné.
+     */
+    private void editSelectedChannel() {
+        Channel selected = getSelectedChannel();
+
+        if (selected == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Sélectionnez un canal à modifier.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        if (dataManager == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Erreur : DataManager non initialisé",
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        ChannelEditDialog.showDialog(parentFrame, selected, dataManager);
     }
 
     /**
@@ -119,12 +144,18 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         newChannelButton.setPreferredSize(new Dimension(45, 25));
         newChannelButton.addActionListener(e -> createNewChannel());
 
+        JButton editChannelButton = new JButton("✏");
+        editChannelButton.setToolTipText("Modifier le canal sélectionné");
+        editChannelButton.setPreferredSize(new Dimension(45, 25));
+        editChannelButton.addActionListener(e -> editSelectedChannel());
+
         JButton deleteChannelButton = new JButton("🗑");
-        deleteChannelButton.setToolTipText("Supprimer le canal sélectionné");
+        deleteChannelButton.setToolTipText("Supprimer un canal");
         deleteChannelButton.setPreferredSize(new Dimension(45, 25));
         deleteChannelButton.addActionListener(e -> deleteSelectedChannel());
 
         buttonsPanel.add(newChannelButton);
+        buttonsPanel.add(editChannelButton);
         buttonsPanel.add(deleteChannelButton);
 
         bottomPanel.add(infoPanel, BorderLayout.WEST);
