@@ -106,17 +106,31 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         // Panel du bas : compteur + bouton supprimer
         JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBackground(new Color(248, 250, 252));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
 
-        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        infoPanel.setOpaque(false);
         countLabel = new JLabel("0 message(s)");
+        countLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        countLabel.setForeground(Color.GRAY);
         infoPanel.add(countLabel);
 
-        JButton deleteButton = new JButton("🗑 Supprimer");
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        rightPanel.setOpaque(false);
+        JButton deleteButton = new JButton("🗑  Supprimer");
+        deleteButton.setFont(new Font("SansSerif", Font.BOLD, 11));
+        deleteButton.setBackground(new Color(220, 38, 38));
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setOpaque(true);
+        deleteButton.setBorderPainted(false);
+        deleteButton.setFocusPainted(false);
         deleteButton.setToolTipText("Supprimer mon message sélectionné (MSG-006)");
         deleteButton.addActionListener(e -> deleteSelectedMessage());
+        rightPanel.add(deleteButton);
 
         bottomPanel.add(infoPanel, BorderLayout.WEST);
-        bottomPanel.add(deleteButton, BorderLayout.EAST);
+        bottomPanel.add(rightPanel, BorderLayout.EAST);
         add(bottomPanel, BorderLayout.SOUTH);
 
         // Mise à jour du compteur
@@ -358,26 +372,53 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
     /**
      * Renderer personnalisé pour les messages.
+     * Affiche un badge coloré indiquant si le message est dans un canal (#) ou un DM (→@).
      */
     private class MessageListCellRenderer extends JPanel implements ListCellRenderer<Message> {
 
+        // Couleurs des badges et stripes
+        private  final Color COLOR_CHANNEL     = new Color(109, 40, 217);
+        private  final Color COLOR_CHANNEL_BG  = new Color(237, 233, 254);
+        private  final Color COLOR_DM          = new Color(5, 150, 105);
+        private  final Color COLOR_DM_BG       = new Color(209, 250, 229);
+
         private JLabel authorLabel;
+        private JLabel destinationBadge;
         private JTextArea contentArea;
         private JLabel dateLabel;
         private JPanel topPanel;
 
         public MessageListCellRenderer() {
-            setLayout(new BorderLayout(5, 5));
-            setOpaque(true); // seul ce JPanel est opaque — les enfants héritent de sa couleur
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
-                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
-            ));
+            setLayout(new BorderLayout(0, 2));
+            setOpaque(true);
 
             // Auteur
             authorLabel = new JLabel();
-            authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD));
+            authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD, 12f));
             authorLabel.setOpaque(false);
+
+            // Badge destination (canal ou DM)
+            destinationBadge = new JLabel();
+            destinationBadge.setFont(new Font("SansSerif", Font.BOLD, 10));
+            destinationBadge.setOpaque(true);
+            destinationBadge.setBorder(BorderFactory.createEmptyBorder(1, 6, 1, 6));
+
+            // Date
+            dateLabel = new JLabel();
+            dateLabel.setFont(dateLabel.getFont().deriveFont(Font.ITALIC, 10f));
+            dateLabel.setOpaque(false);
+
+            // Panel droit : badge + date côte à côte
+            JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+            rightPanel.setOpaque(false);
+            rightPanel.add(destinationBadge);
+            rightPanel.add(dateLabel);
+
+            // Panel du haut : auteur à gauche, badge+date à droite
+            topPanel = new JPanel(new BorderLayout());
+            topPanel.setOpaque(false);
+            topPanel.add(authorLabel, BorderLayout.WEST);
+            topPanel.add(rightPanel, BorderLayout.EAST);
 
             // Contenu — DOIT rester non-opaque dans un JList renderer
             contentArea = new JTextArea();
@@ -385,17 +426,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             contentArea.setLineWrap(true);
             contentArea.setWrapStyleWord(true);
             contentArea.setOpaque(false);
-
-            // Date
-            dateLabel = new JLabel();
-            dateLabel.setFont(dateLabel.getFont().deriveFont(Font.ITALIC, 10f));
-            dateLabel.setOpaque(false);
-
-            // Panel du haut (auteur + date) — transparent, montre la couleur du JPanel parent
-            topPanel = new JPanel(new BorderLayout());
-            topPanel.setOpaque(false);
-            topPanel.add(authorLabel, BorderLayout.WEST);
-            topPanel.add(dateLabel, BorderLayout.EAST);
+            contentArea.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
             add(topPanel, BorderLayout.NORTH);
             add(contentArea, BorderLayout.CENTER);
@@ -404,16 +435,65 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         @Override
         public Component getListCellRendererComponent(JList<? extends Message> list, Message message,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
-            if (message != null) {
-                User sender = message.getSender();
-                authorLabel.setText("👤 @" + sender.getUserTag() + " (" + sender.getName() + ")");
-                contentArea.setText(message.getText());
+            if (message == null) return this;
 
-                Date messageDate = new Date(message.getEmissionDate());
-                dateLabel.setText(dateFormat.format(messageDate));
+            // ── Auteur ────────────────────────────────────────────────────
+            User sender = message.getSender();
+            authorLabel.setText("👤 @" + sender.getUserTag() + " (" + sender.getName() + ")");
+
+            // ── Contenu ───────────────────────────────────────────────────
+            contentArea.setText(message.getText());
+
+            // ── Date ──────────────────────────────────────────────────────
+            dateLabel.setText(dateFormat.format(new Date(message.getEmissionDate())));
+
+            // ── Déterminer si canal ou DM ─────────────────────────────────
+            UUID recipientUuid = message.getRecipient();
+            String channelName = null;
+            String recipientTag = null;
+
+            if (dataManager != null) {
+                for (Channel ch : dataManager.getChannels()) {
+                    if (ch.getUuid().equals(recipientUuid)) {
+                        channelName = ch.getName();
+                        break;
+                    }
+                }
+                if (channelName == null) {
+                    for (User u : dataManager.getUsers()) {
+                        if (u.getUuid().equals(recipientUuid)) {
+                            recipientTag = u.getUserTag();
+                            break;
+                        }
+                    }
+                }
             }
 
-            // Couleur de fond : seul le JPanel externe change — les enfants (opaque=false) héritent
+            // ── Badge et stripe gauche selon le type ──────────────────────
+            Color stripeColor;
+            if (channelName != null) {
+                destinationBadge.setText("# " + channelName);
+                destinationBadge.setBackground(isSelected ? COLOR_CHANNEL : COLOR_CHANNEL_BG);
+                destinationBadge.setForeground(isSelected ? Color.WHITE : COLOR_CHANNEL);
+                stripeColor = COLOR_CHANNEL;
+            } else if (recipientTag != null) {
+                destinationBadge.setText("→ @" + recipientTag);
+                destinationBadge.setBackground(isSelected ? COLOR_DM : COLOR_DM_BG);
+                destinationBadge.setForeground(isSelected ? Color.WHITE : COLOR_DM);
+                stripeColor = COLOR_DM;
+            } else {
+                destinationBadge.setText("");
+                destinationBadge.setBackground(Color.LIGHT_GRAY);
+                stripeColor = Color.LIGHT_GRAY;
+            }
+
+            // Bordure : stripe colorée à gauche + séparateur bas + padding
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 4, 1, 0, stripeColor),
+                    BorderFactory.createEmptyBorder(5, 8, 5, 5)
+            ));
+
+            // ── Couleurs fond/texte selon sélection ───────────────────────
             Color bg = isSelected ? list.getSelectionBackground() : list.getBackground();
             Color fg = isSelected ? list.getSelectionForeground() : list.getForeground();
 

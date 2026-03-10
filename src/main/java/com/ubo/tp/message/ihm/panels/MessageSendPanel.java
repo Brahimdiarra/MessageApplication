@@ -70,19 +70,33 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         messageTextArea = new JTextArea(3, 40);
         messageTextArea.setLineWrap(true);
         messageTextArea.setWrapStyleWord(true);
-        messageTextArea.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        messageTextArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        messageTextArea.setBackground(new Color(248, 250, 252));
+        messageTextArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         JScrollPane scrollPane = new JScrollPane(messageTextArea);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(4, 6, 4, 6),
+                BorderFactory.createLineBorder(new Color(203, 213, 225))
+        ));
 
         // Panel du bas : compteur de caractères
         charCountLabel = new JLabel("0/200");
-        charCountLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        charCountLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        charCountLabel.setForeground(Color.GRAY);
 
-        // Panel du bas : bouton envoyer
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // Panel du bas : bouton envoyer (bleu accent)
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        bottomPanel.setBackground(new Color(248, 250, 252));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
         bottomPanel.add(charCountLabel);
-        sendButton = new JButton("Envoyer");
-        sendButton.setPreferredSize(new Dimension(100, 30));
+        sendButton = new JButton("  Envoyer  ");
+        sendButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+        sendButton.setBackground(MessageAppMainView.COLOR_ACCENT);
+        sendButton.setForeground(Color.WHITE);
+        sendButton.setOpaque(true);
+        sendButton.setBorderPainted(false);
+        sendButton.setFocusPainted(false);
+        sendButton.setPreferredSize(new Dimension(110, 30));
         sendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

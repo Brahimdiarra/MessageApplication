@@ -489,12 +489,18 @@ public class MessageAppMainView extends JFrame {
      * Crée le panel principal avec les listes.
      */
     private JPanel createMainContentPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(5, 5));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        JPanel mainPanel = new JPanel(new BorderLayout(8, 8));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        mainPanel.setBackground(COLOR_BG);
 
         // Panel de gauche : Utilisateurs + Canaux
-        JPanel leftPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-        leftPanel.setPreferredSize(new Dimension(250, 0));
+        JPanel leftPanel = new JPanel(new GridLayout(2, 1, 6, 6));
+        leftPanel.setPreferredSize(new Dimension(260, 0));
+        leftPanel.setBackground(new Color(241, 245, 249));
+        leftPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(203, 213, 225)),
+                BorderFactory.createEmptyBorder(4, 4, 4, 8)
+        ));
 
         userListPanel = new UserListPanel();
         channelListPanel = new ChannelListPanel();
@@ -506,7 +512,8 @@ public class MessageAppMainView extends JFrame {
         leftPanel.add(channelListPanel);
 
         // Panel central : Messages + Panel d'envoi
-        JPanel centerPanel = new JPanel(new BorderLayout(5, 5));
+        JPanel centerPanel = new JPanel(new BorderLayout(6, 6));
+        centerPanel.setBackground(COLOR_BG);
 
         messageListPanel = new MessageListPanel();
         messageListPanel.setMessageApp(messageApp); // IMPORTANT

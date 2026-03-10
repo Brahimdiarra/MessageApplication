@@ -151,34 +151,58 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         channelList = new JList<>(channelListModel);
         channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         channelList.setCellRenderer(new ChannelListCellRenderer());
+        channelList.setFixedCellHeight(36);
+        channelList.setBackground(Color.WHITE);
 
         JScrollPane scrollPane = new JScrollPane(channelList);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Panel du bas avec le bouton "Nouveau"
+        // Panel du bas
         JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBackground(new Color(248, 250, 252));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
 
         // Compteur
-        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        infoPanel.setOpaque(false);
         countLabel = new JLabel("0 canal(aux)");
+        countLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        countLabel.setForeground(Color.GRAY);
         infoPanel.add(countLabel);
 
-        // Boutons du bas (nouveau + supprimer)
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+        // Boutons colorés
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 3));
+        buttonsPanel.setOpaque(false);
 
         JButton newChannelButton = new JButton("+");
         newChannelButton.setToolTipText("Créer un nouveau canal");
-        newChannelButton.setPreferredSize(new Dimension(45, 25));
+        newChannelButton.setPreferredSize(new Dimension(30, 24));
+        newChannelButton.setBackground(new Color(22, 163, 74));  // vert
+        newChannelButton.setForeground(Color.WHITE);
+        newChannelButton.setOpaque(true);
+        newChannelButton.setBorderPainted(false);
+        newChannelButton.setFocusPainted(false);
+        newChannelButton.setFont(new Font("SansSerif", Font.BOLD, 14));
         newChannelButton.addActionListener(e -> createNewChannel());
 
         JButton editChannelButton = new JButton("✏");
         editChannelButton.setToolTipText("Modifier le canal sélectionné");
-        editChannelButton.setPreferredSize(new Dimension(45, 25));
+        editChannelButton.setPreferredSize(new Dimension(30, 24));
+        editChannelButton.setBackground(MessageAppMainView.COLOR_ACCENT);  // bleu
+        editChannelButton.setForeground(Color.WHITE);
+        editChannelButton.setOpaque(true);
+        editChannelButton.setBorderPainted(false);
+        editChannelButton.setFocusPainted(false);
         editChannelButton.addActionListener(e -> editSelectedChannel());
 
         JButton deleteChannelButton = new JButton("🗑");
         deleteChannelButton.setToolTipText("Supprimer un canal");
-        deleteChannelButton.setPreferredSize(new Dimension(45, 25));
+        deleteChannelButton.setPreferredSize(new Dimension(30, 24));
+        deleteChannelButton.setBackground(new Color(220, 38, 38));  // rouge
+        deleteChannelButton.setForeground(Color.WHITE);
+        deleteChannelButton.setOpaque(true);
+        deleteChannelButton.setBorderPainted(false);
+        deleteChannelButton.setFocusPainted(false);
         deleteChannelButton.addActionListener(e -> deleteSelectedChannel());
 
         buttonsPanel.add(newChannelButton);
@@ -290,6 +314,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
      * Renderer personnalisé pour les canaux.
      */
     private class ChannelListCellRenderer extends DefaultListCellRenderer {
+        private  final Color COLOR_CHANNEL = new Color(109, 40, 217); // violet
+
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
@@ -297,10 +323,16 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
             if (value instanceof Channel) {
                 Channel channel = (Channel) value;
-                setText("# " + channel.getName());
-                setToolTipText("Créateur: " + channel.getCreator().getName());
+                setText("  #  " + channel.getName());
+                setFont(new Font("SansSerif", Font.PLAIN, 12));
+                setToolTipText("Créateur : " + channel.getCreator().getName());
             }
 
+            setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            if (!isSelected) {
+                setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
+                setForeground(COLOR_CHANNEL);
+            }
             return this;
         }
     }

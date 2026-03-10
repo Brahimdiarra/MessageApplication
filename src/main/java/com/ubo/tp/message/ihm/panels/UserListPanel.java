@@ -69,11 +69,17 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         userList = new JList<>(userListModel);
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         userList.setCellRenderer(new UserListCellRenderer());
+        userList.setFixedCellHeight(40);
+        userList.setBackground(Color.WHITE);
         add(new JScrollPane(userList), BorderLayout.CENTER);
 
         // ── BAS : compteur ────────────────────────────────────────────────────
-        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        infoPanel.setBackground(new Color(248, 250, 252));
+        infoPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
         countLabel = new JLabel("0 utilisateur(s)");
+        countLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        countLabel.setForeground(Color.GRAY);
         infoPanel.add(countLabel);
         add(infoPanel, BorderLayout.SOUTH);
 
@@ -154,8 +160,14 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
             if (value instanceof User) {
                 User user = (User) value;
                 String statusIcon = user.isOnline() ? "🟢" : "⚫";
-                setText(statusIcon + " @" + user.getUserTag() + " (" + user.getName() + ")");
+                setText(statusIcon + "  @" + user.getUserTag() + "  (" + user.getName() + ")");
+                setFont(new Font("SansSerif", Font.PLAIN, 12));
                 setToolTipText("UUID: " + user.getUuid());
+            }
+            setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+            if (!isSelected) {
+                setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
+                setForeground(new Color(30, 41, 59));
             }
             return this;
         }

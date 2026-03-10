@@ -1,7 +1,6 @@
 package main.java.com.ubo.tp.message.ihm;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -94,26 +93,19 @@ public class LoginPanel extends JPanel {
         initComponents();
     }
 
+    // Palette de couleurs (même que MessageAppMainView)
+    private static final Color COLOR_PRIMARY  = new Color(30, 58, 138);
+    private static final Color COLOR_ACCENT   = new Color(59, 130, 246);
+    private static final Color COLOR_BG       = new Color(248, 250, 252);
+
     // ============================================
     // MÉTHODES D'INITIALISATION
     // ============================================
 
-    /**
-     * Initialise tous les composants visuels du panneau.
-     * 
-     * Cette méthode :
-     * 1. Configure le layout du panneau (GridBagLayout)
-     * 2. Crée tous les composants (labels, textfields, boutons)
-     * 3. Ajoute les composants au panneau avec les bonnes contraintes
-     * 4. Configure les listeners pour les boutons
-     */
     private void initComponents() {
-        // Utiliser GridBagLayout pour un positionnement flexible
+        // Layout principal : centrer la carte dans le fond coloré
         this.setLayout(new GridBagLayout());
-
-        // Définir l'apparence générale du panneau
-        this.setBackground(new Color(240, 240, 240));
-        this.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        this.setBackground(COLOR_BG);
 
         // Créer les composants
         createLabels();
@@ -130,18 +122,17 @@ public class LoginPanel extends JPanel {
      * Les labels servent à expliquer à l'utilisateur à quoi servent les champs.
      */
     private void createLabels() {
-        // Label pour le tag
-        // Le tag est l'identifiant unique de l'utilisateur (ex: "john_doe")
         labelTag = new JLabel("Tag :");
-        labelTag.setFont(new Font("Arial", Font.BOLD, 14));
+        labelTag.setFont(new Font("SansSerif", Font.BOLD, 13));
+        labelTag.setForeground(new Color(30, 41, 59));
 
-        // Label pour le mot de passe
         labelPassword = new JLabel("Mot de passe :");
-        labelPassword.setFont(new Font("Arial", Font.BOLD, 14));
+        labelPassword.setFont(new Font("SansSerif", Font.BOLD, 13));
+        labelPassword.setForeground(new Color(30, 41, 59));
 
-        // Label pour le nom (visible seulement en mode inscription)
         labelName = new JLabel("Nom :");
-        labelName.setFont(new Font("Arial", Font.BOLD, 14));
+        labelName.setFont(new Font("SansSerif", Font.BOLD, 13));
+        labelName.setForeground(new Color(30, 41, 59));
     }
 
     /**
@@ -152,17 +143,23 @@ public class LoginPanel extends JPanel {
      * de passe)
      */
     private void createTextFields() {
-        // Champ pour le tag
         textFieldTag = new JTextField(20);
-        textFieldTag.setFont(new Font("Arial", Font.PLAIN, 12));
+        textFieldTag.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        textFieldTag.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        // Champ pour le mot de passe
         passwordField = new JPasswordField(20);
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 12));
+        passwordField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        passwordField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        // Champ pour le nom
         textFieldName = new JTextField(20);
-        textFieldName.setFont(new Font("Arial", Font.PLAIN, 12));
+        textFieldName.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        textFieldName.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
     }
 
     /**
@@ -173,12 +170,14 @@ public class LoginPanel extends JPanel {
      * 2. buttonToggleMode : pour basculer entre les deux modes
      */
     private void createButtons() {
-        // Bouton principal (Connexion ou Créer un compte selon le mode)
         buttonSubmit = new JButton("Connexion");
-        buttonSubmit.setFont(new Font("Arial", Font.BOLD, 12));
-        buttonSubmit.setBackground(new Color(70, 130, 180));
+        buttonSubmit.setFont(new Font("SansSerif", Font.BOLD, 13));
+        buttonSubmit.setBackground(COLOR_ACCENT);
         buttonSubmit.setForeground(Color.WHITE);
+        buttonSubmit.setOpaque(true);
+        buttonSubmit.setBorderPainted(false);
         buttonSubmit.setFocusPainted(false);
+        buttonSubmit.setPreferredSize(new Dimension(140, 34));
         buttonSubmit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -186,12 +185,14 @@ public class LoginPanel extends JPanel {
             }
         });
 
-        // Bouton pour basculer le mode
         buttonToggleMode = new JButton("Créer un compte");
-        buttonToggleMode.setFont(new Font("Arial", Font.PLAIN, 11));
-        buttonToggleMode.setBackground(new Color(150, 150, 150));
+        buttonToggleMode.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        buttonToggleMode.setBackground(new Color(100, 116, 139));
         buttonToggleMode.setForeground(Color.WHITE);
+        buttonToggleMode.setOpaque(true);
+        buttonToggleMode.setBorderPainted(false);
         buttonToggleMode.setFocusPainted(false);
+        buttonToggleMode.setPreferredSize(new Dimension(140, 34));
         buttonToggleMode.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -208,118 +209,87 @@ public class LoginPanel extends JPanel {
      * espacement, etc.)
      */
     private void addComponents() {
-        // Effacer tous les composants précédents (en cas de rappel)
         this.removeAll();
 
-        // Titre du panneau
-        JLabel titleLabel = new JLabel(isSignupMode ? "Créer un compte" : "Connexion");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        this.add(titleLabel, new GridBagConstraints(
-                0, 0, // Position: colonne 0, ligne 0
-                2, 1, // Taille: 2 colonnes, 1 ligne
-                1.0, 0.0, // Poids: largeur élastique, hauteur fixe
-                GridBagConstraints.CENTER, // Ancrage: centré
-                GridBagConstraints.HORIZONTAL, // Remplissage: horizontal
-                new Insets(0, 0, 20, 0), // Espacement: 20px en bas
-                0, 0 // Espacement interne: aucun
+        // ── Carte centrale blanche ─────────────────────────────────────────────
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
+                BorderFactory.createEmptyBorder(0, 0, 20, 0)
         ));
 
-        // --- Ligne 1 : Label Tag ---
-        this.add(labelTag, new GridBagConstraints(
-                0, 1, // Position: colonne 0, ligne 1
-                1, 1, // Taille: 1 colonne, 1 ligne
-                0.0, 0.0, // Poids: taille fixe
-                GridBagConstraints.EAST, // Ancrage: à droite
-                GridBagConstraints.NONE, // Pas de remplissage
-                new Insets(5, 5, 5, 5), // Espacement: 5px partout
-                0, 0));
+        // ── En-tête coloré dans la carte ──────────────────────────────────────
+        JPanel cardHeader = new JPanel(new BorderLayout());
+        cardHeader.setBackground(COLOR_PRIMARY);
+        cardHeader.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
+        JLabel titleLabel = new JLabel(isSignupMode ? "💬  Créer un compte" : "💬  Connexion");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        titleLabel.setForeground(Color.WHITE);
+        cardHeader.add(titleLabel, BorderLayout.WEST);
 
-        // --- Ligne 1 : Champ Tag ---
-        this.add(textFieldTag, new GridBagConstraints(
-                1, 1, // Position: colonne 1, ligne 1
-                1, 1, // Taille: 1 colonne, 1 ligne
-                1.0, 0.0, // Poids: largeur élastique
-                GridBagConstraints.WEST, // Ancrage: à gauche
-                GridBagConstraints.HORIZONTAL, // Remplissage: horizontal
-                new Insets(5, 5, 5, 5), // Espacement: 5px partout
-                0, 0));
+        GridBagConstraints gbc = new GridBagConstraints();
 
-        // --- Ligne 2 : Label Mot de passe ---
-        this.add(labelPassword, new GridBagConstraints(
-                0, 2, // Position: colonne 0, ligne 2
-                1, 1,
-                0.0, 0.0,
-                GridBagConstraints.EAST,
-                GridBagConstraints.NONE,
-                new Insets(5, 5, 5, 5),
-                0, 0));
+        // Header dans la carte (ligne 0)
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0; gbc.insets = new Insets(0, 0, 16, 0);
+        card.add(cardHeader, gbc);
 
-        // --- Ligne 2 : Champ Mot de passe ---
-        this.add(passwordField, new GridBagConstraints(
-                1, 2, // Position: colonne 1, ligne 2
-                1, 1,
-                1.0, 0.0,
-                GridBagConstraints.WEST,
-                GridBagConstraints.HORIZONTAL,
-                new Insets(5, 5, 5, 5),
-                0, 0));
+        // ── Champs ────────────────────────────────────────────────────────────
+        gbc.gridwidth = 1; gbc.insets = new Insets(6, 16, 2, 8);
 
-        // --- Ligne 3 : Label Nom (seulement en mode inscription) ---
+        // Tag label
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.EAST;
+        card.add(labelTag, gbc);
+
+        // Tag field
+        gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+        card.add(textFieldTag, gbc);
+
+        // Password label
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.EAST; gbc.insets = new Insets(6, 16, 2, 8);
+        card.add(labelPassword, gbc);
+
+        // Password field
+        gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+        card.add(passwordField, gbc);
+
         if (isSignupMode) {
-            this.add(labelName, new GridBagConstraints(
-                    0, 3,
-                    1, 1,
-                    0.0, 0.0,
-                    GridBagConstraints.EAST,
-                    GridBagConstraints.NONE,
-                    new Insets(5, 5, 5, 5),
-                    0, 0));
+            // Name label
+            gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
+            gbc.anchor = GridBagConstraints.EAST; gbc.insets = new Insets(6, 16, 2, 8);
+            card.add(labelName, gbc);
 
-            // --- Ligne 3 : Champ Nom ---
-            this.add(textFieldName, new GridBagConstraints(
-                    1, 3, // Position: colonne 1, ligne 3
-                    1, 1,
-                    1.0, 0.0,
-                    GridBagConstraints.WEST,
-                    GridBagConstraints.HORIZONTAL,
-                    new Insets(5, 5, 5, 5),
-                    0, 0));
+            // Name field
+            gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+            card.add(textFieldName, gbc);
         }
 
-        // --- Boutons en bas du panneau ---
-        int lastRow = isSignupMode ? 4 : 3;
+        // ── Boutons ───────────────────────────────────────────────────────────
+        int buttonRow = isSignupMode ? 4 : 3;
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(buttonSubmit);
+        buttonPanel.add(buttonToggleMode);
 
-        // Bouton Submit (Connexion ou Créer un compte)
-        this.add(buttonSubmit, new GridBagConstraints(
-                0, lastRow, // Position: colonne 0, ligne après les champs
-                1, 1,
-                1.0, 0.0,
-                GridBagConstraints.CENTER,
-                GridBagConstraints.HORIZONTAL,
-                new Insets(20, 5, 5, 5),
-                0, 0));
+        gbc.gridx = 0; gbc.gridy = buttonRow; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(20, 16, 0, 16);
+        card.add(buttonPanel, gbc);
 
-        // Bouton Toggle Mode (Créer un compte ou Connexion)
-        this.add(buttonToggleMode, new GridBagConstraints(
-                1, lastRow, // Position: colonne 1, même ligne que Submit
-                1, 1,
-                1.0, 0.0,
-                GridBagConstraints.CENTER,
-                GridBagConstraints.HORIZONTAL,
-                new Insets(20, 5, 5, 5),
-                0, 0));
+        // ── Centrer la carte dans le panel principal ───────────────────────────
+        GridBagConstraints outer = new GridBagConstraints();
+        outer.anchor = GridBagConstraints.CENTER;
+        outer.fill = GridBagConstraints.NONE;
+        outer.weightx = 1.0; outer.weighty = 1.0;
+        this.add(card, outer);
 
-        // Espace vide en bas pour pousser les contenus vers le haut
-        this.add(new JPanel(), new GridBagConstraints(
-                0, lastRow + 1, // Position: colonne 0, ligne après les boutons
-                2, 1, // Taille: 2 colonnes
-                1.0, 1.0, // Poids: élastique en largeur ET hauteur
-                GridBagConstraints.CENTER,
-                GridBagConstraints.BOTH, // Remplissage: partout
-                new Insets(0, 0, 0, 0),
-                0, 0));
-
-        // Redessiner le panneau
         this.revalidate();
         this.repaint();
     }
