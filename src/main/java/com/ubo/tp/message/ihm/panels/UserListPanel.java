@@ -4,6 +4,7 @@ import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
+import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -36,7 +37,13 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
 
     private void initComponents() {
         setLayout(new BorderLayout());
-        setBorder(new TitledBorder("Utilisateurs connectés"));
+        TitledBorder userBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
+                "Utilisateurs connectés", TitledBorder.LEFT, TitledBorder.TOP);
+        userBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
+        userBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
+        setBorder(userBorder);
+        setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
         // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));

@@ -7,6 +7,7 @@ import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
 import main.java.com.ubo.tp.message.ihm.MessageApp;
+import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -69,7 +70,13 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private void initComponents() {
         setLayout(new BorderLayout());
-        setBorder(new TitledBorder("Messages"));
+        TitledBorder msgBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
+                "Messages", TitledBorder.LEFT, TitledBorder.TOP);
+        msgBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
+        msgBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
+        setBorder(msgBorder);
+        setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
         // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
@@ -357,9 +364,11 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         private JLabel authorLabel;
         private JTextArea contentArea;
         private JLabel dateLabel;
+        private JPanel topPanel;
 
         public MessageListCellRenderer() {
             setLayout(new BorderLayout(5, 5));
+            setOpaque(true); // seul ce JPanel est opaque — les enfants héritent de sa couleur
             setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
                     BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -368,8 +377,9 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             // Auteur
             authorLabel = new JLabel();
             authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD));
+            authorLabel.setOpaque(false);
 
-            // Contenu
+            // Contenu — DOIT rester non-opaque dans un JList renderer
             contentArea = new JTextArea();
             contentArea.setEditable(false);
             contentArea.setLineWrap(true);
@@ -379,10 +389,10 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             // Date
             dateLabel = new JLabel();
             dateLabel.setFont(dateLabel.getFont().deriveFont(Font.ITALIC, 10f));
-            dateLabel.setForeground(Color.GRAY);
+            dateLabel.setOpaque(false);
 
-            // Panel du haut (auteur + date)
-            JPanel topPanel = new JPanel(new BorderLayout());
+            // Panel du haut (auteur + date) — transparent, montre la couleur du JPanel parent
+            topPanel = new JPanel(new BorderLayout());
             topPanel.setOpaque(false);
             topPanel.add(authorLabel, BorderLayout.WEST);
             topPanel.add(dateLabel, BorderLayout.EAST);
@@ -395,23 +405,22 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         public Component getListCellRendererComponent(JList<? extends Message> list, Message message,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
             if (message != null) {
-                // Utilisation des bonnes méthodes
                 User sender = message.getSender();
                 authorLabel.setText("👤 @" + sender.getUserTag() + " (" + sender.getName() + ")");
                 contentArea.setText(message.getText());
 
-                // Conversion du timestamp (long) en Date
                 Date messageDate = new Date(message.getEmissionDate());
                 dateLabel.setText(dateFormat.format(messageDate));
-
-                if (isSelected) {
-                    setBackground(list.getSelectionBackground());
-                    contentArea.setForeground(list.getSelectionForeground());
-                } else {
-                    setBackground(list.getBackground());
-                    contentArea.setForeground(list.getForeground());
-                }
             }
+
+            // Couleur de fond : seul le JPanel externe change — les enfants (opaque=false) héritent
+            Color bg = isSelected ? list.getSelectionBackground() : list.getBackground();
+            Color fg = isSelected ? list.getSelectionForeground() : list.getForeground();
+
+            setBackground(bg);
+            authorLabel.setForeground(fg);
+            contentArea.setForeground(fg);
+            dateLabel.setForeground(isSelected ? fg : Color.GRAY);
 
             return this;
         }

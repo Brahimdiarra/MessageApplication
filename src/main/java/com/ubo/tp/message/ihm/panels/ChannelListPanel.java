@@ -6,6 +6,7 @@ import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
+import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 import main.java.com.ubo.tp.message.ihm.dialog.ChannelCreationDialog;
 import main.java.com.ubo.tp.message.ihm.dialog.ChannelEditDialog;
 
@@ -124,7 +125,13 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
      */
     private void initComponents() {
         setLayout(new BorderLayout());
-        setBorder(new TitledBorder("Canaux disponibles"));
+        TitledBorder channelBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
+                "Canaux disponibles", TitledBorder.LEFT, TitledBorder.TOP);
+        channelBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
+        channelBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
+        setBorder(channelBorder);
+        setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
         // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));

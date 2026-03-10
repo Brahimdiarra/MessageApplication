@@ -1,11 +1,12 @@
 package main.java.com.ubo.tp.message.ihm.panels;
 
 import main.java.com.ubo.tp.message.core.DataManager;
+import main.java.com.ubo.tp.message.core.SessionManager;
 import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
 import main.java.com.ubo.tp.message.datamodel.User;
-import main.java.com.ubo.tp.message.core.SessionManager;
+import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -45,7 +46,13 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
      */
     private void initComponents() {
         setLayout(new BorderLayout(5, 5));
-        setBorder(new TitledBorder("Envoyer un message"));
+        TitledBorder sendBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
+                "Envoyer un message", TitledBorder.LEFT, TitledBorder.TOP);
+        sendBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
+        sendBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
+        setBorder(sendBorder);
+        setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
         // Panel du haut : sélection du destinataire
         JPanel topPanel = new JPanel(new BorderLayout(5, 5));

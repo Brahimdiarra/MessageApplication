@@ -3,6 +3,7 @@ package main.java.com.ubo.tp.message.ihm;
 import main.java.com.ubo.tp.message.core.database.IDatabase;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.User;
+import main.java.com.ubo.tp.message.ihm.dialog.UserProfileDialog;
 import main.java.com.ubo.tp.message.ihm.panels.ChannelListPanel;
 import main.java.com.ubo.tp.message.ihm.panels.MessageListPanel;
 import main.java.com.ubo.tp.message.ihm.panels.MessageSendPanel;
@@ -25,10 +26,19 @@ public class MessageAppMainView extends JFrame {
     private static final String APP_VERSION = "Version 1.0";
     private static final String APP_AUTHOR = "Développé par BRAHIM";
 
+    // ── Palette de couleurs de l'application ─────────────────────────────
+    public static final Color COLOR_PRIMARY    = new Color(30, 58, 138);  // bleu foncé header
+    public static final Color COLOR_ACCENT     = new Color(59, 130, 246); // bleu vif bordures/titres
+    public static final Color COLOR_BG         = new Color(248, 250, 252); // fond général très clair
+    public static final Color COLOR_PANEL_BG   = Color.WHITE;
+
+    private JLabel headerUserLabel;
+
     private JMenuItem menuItemQuit;
     private JMenuItem menuItemAbout;
     private JMenuItem menuItemSelectDirectory;
     private JMenuItem menuItemLogout;
+    private JMenuItem menuItemProfile;
 
     private MessageApp messageApp;
     private AuthenticationView authenticationView;
@@ -71,8 +81,12 @@ public class MessageAppMainView extends JFrame {
         // Création de la barre de menu
         setJMenuBar(createMenuBar());
 
+        // Barre d'en-tête colorée
+        add(createHeaderPanel(), BorderLayout.NORTH);
+
         // Panel principal avec les listes
         JPanel mainPanel = createMainContentPanel();
+        mainPanel.setBackground(COLOR_BG);
         add(mainPanel, BorderLayout.CENTER);
 
         // Ne pas afficher la fenêtre tout de suite (sera affichée après login)
@@ -94,8 +108,11 @@ public class MessageAppMainView extends JFrame {
      * @param userTag Tag de l'utilisateur connecté
      */
     public void showMainView(String userTag) {
-        // Mettre à jour le titre avec l'utilisateur connecté
+        // Mettre à jour le titre et le header
         setTitle(APP_TITLE + " - Connecté en tant que @" + userTag);
+        if (headerUserLabel != null) {
+            headerUserLabel.setText("Connecté en tant que  @" + userTag);
+        }
 
         // Enregistrer les observateurs
         try {
@@ -158,6 +175,15 @@ public class MessageAppMainView extends JFrame {
             }
         });
         menuFile.add(menuItemSelectDirectory);
+
+        menuFile.addSeparator();
+
+        // Menu item : Mon profil
+        menuItemProfile = new JMenuItem("Mon profil");
+        menuItemProfile.setIcon(loadIcon("editIcon_20.png"));
+        menuItemProfile.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
+        menuItemProfile.addActionListener(e -> openUserProfile());
+        menuFile.add(menuItemProfile);
 
         menuFile.addSeparator();
 
@@ -261,6 +287,42 @@ public class MessageAppMainView extends JFrame {
                 "À propos",
                 JOptionPane.PLAIN_MESSAGE
         );
+    }
+
+    /**
+     * Crée la barre d'en-tête colorée affichant l'utilisateur connecté.
+     */
+    private JPanel createHeaderPanel() {
+        JPanel header = new JPanel(new BorderLayout(10, 0));
+        header.setBackground(COLOR_PRIMARY);
+        header.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+
+        // Logo / titre à gauche
+        JLabel appLabel = new JLabel("💬  " + APP_TITLE);
+        appLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
+        appLabel.setForeground(Color.WHITE);
+
+        // Utilisateur connecté à droite
+        headerUserLabel = new JLabel("");
+        headerUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        headerUserLabel.setForeground(new Color(186, 207, 255));
+
+        header.add(appLabel, BorderLayout.WEST);
+        header.add(headerUserLabel, BorderLayout.EAST);
+        return header;
+    }
+
+    /**
+     * Ouvre le dialogue de modification du profil utilisateur (USR-009).
+     */
+    private void openUserProfile() {
+        if (messageApp == null || messageApp.mDataManager == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Erreur : DataManager non initialisé.",
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        UserProfileDialog.showDialog(this, messageApp.mDataManager);
     }
 
     /**
