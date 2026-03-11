@@ -6,7 +6,7 @@ import main.java.com.ubo.tp.message.core.database.DbConnector;
 import main.java.com.ubo.tp.message.core.database.EntityManager;
 import main.java.com.ubo.tp.message.ihm.ConsoleObserver;
 import main.java.com.ubo.tp.message.ihm.MessageApp;
-import main.java.mock.MessageAppMock;
+
 
 /**
  * Classe de lancement de l'application.
@@ -39,10 +39,7 @@ public class MessageAppLauncher {
 
 		DbConnector dbConnector = new DbConnector(database);
 
-		if (IS_MOCK_ENABLED) {
-			MessageAppMock mock = new MessageAppMock(dbConnector, dataManager);
-			mock.showGUI();
-		}
+
 
 		MessageApp messageApp = new MessageApp(dataManager);
 		messageApp.init();
