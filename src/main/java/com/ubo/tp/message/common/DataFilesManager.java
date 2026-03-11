@@ -76,6 +76,8 @@ public class DataFilesManager {
 	 */
 	protected static final String PROPERTY_KEY_CHANNEL_USERS = "Users";
 
+	protected static final String PROPERTY_KEY_USER_ONLINE = "Online";
+
 	/**
 	 * Séparateur pour les utilisateurs.
 	 */
@@ -107,6 +109,8 @@ public class DataFilesManager {
 			// Utiliser la méthode spéciale qui charge le hash directement
 			// sans faire de nouveau hash
 			user = User.createFromStoredHash(UUID.fromString(uuid), tag, passwordHash, name);
+			boolean online = Boolean.parseBoolean(properties.getProperty(PROPERTY_KEY_USER_ONLINE, "false"));
+			user.setOnline(online);
 		}
 
 		return user;
@@ -129,6 +133,7 @@ public class DataFilesManager {
 		// Pas besoin de le chiffrer à nouveau
 		properties.setProperty(PROPERTY_KEY_USER_PASSWORD, user.getUserPasswordHash());
 		properties.setProperty(PROPERTY_KEY_NAME, user.getName());
+		properties.setProperty(PROPERTY_KEY_USER_ONLINE, String.valueOf(user.isOnline()));
 
 		PropertiesManager.writeProperties(properties, destFileName);
 	}

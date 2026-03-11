@@ -19,6 +19,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -236,13 +237,21 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private void applySearch() {
         String query = searchField.getText().trim().toLowerCase();
+        // Trier par date croissante : les plus anciens en haut, le dernier en bas
+        List<Message> sorted = new ArrayList<>(currentMessages);
+        sorted.sort(Comparator.comparingLong(Message::getEmissionDate));
         messageListModel.clear();
-        for (Message m : currentMessages) {
+        for (Message m : sorted) {
             if (query.isEmpty()
                     || m.getText().toLowerCase().contains(query)
                     || m.getSender().getUserTag().toLowerCase().contains(query)) {
                 messageListModel.addElement(m);
             }
+        }
+        // Scroll vers le dernier message (bas de la liste)
+        int last = messageListModel.getSize() - 1;
+        if (last >= 0) {
+            SwingUtilities.invokeLater(() -> messageList.ensureIndexIsVisible(messageListModel.getSize() - 1));
         }
     }
 
@@ -272,6 +281,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
                     }
                 }
             }
+            currentMessages.sort(Comparator.comparingLong(Message::getEmissionDate));
         }
         applySearch(); // applique aussi le filtre texte en cours
     }
@@ -308,6 +318,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
                 currentMessages.add(message);
             }
         }
+        currentMessages.sort(Comparator.comparingLong(Message::getEmissionDate));
         applySearch();
     }
 
