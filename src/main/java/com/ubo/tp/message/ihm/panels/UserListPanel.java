@@ -1,5 +1,6 @@
 package main.java.com.ubo.tp.message.ihm.panels;
 
+import main.java.com.ubo.tp.message.core.SessionManager;
 import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.Message;
@@ -10,7 +11,10 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Panel d'affichage de la liste des utilisateurs avec barre de recherche (USR-008).
@@ -30,6 +34,12 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
      * sans perdre les éléments qui ne correspondent pas au filtre actuel.
      */
     private final List<User> allUsers = new ArrayList<>();
+
+    /** Compteurs de DM non lus par UUID d'expéditeur (CHN-009). */
+    private final Map<UUID, Integer> unreadCounts = new HashMap<>();
+
+    /** UUID de l'utilisateur dont la conversation est actuellement affichée. */
+    private UUID currentlyViewingUuid = null;
 
     public UserListPanel() {
         initComponents();
@@ -145,7 +155,39 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         });
     }
 
-    @Override public void notifyMessageAdded(Message m)    { /* Non utilisé */ }
+    @Override
+    public void notifyMessageAdded(Message m) {
+        SwingUtilities.invokeLater(() -> {
+            User currentUser = SessionManager.getInstance().getCurrentUser();
+            if (currentUser == null) return;
+
+            // Ignorer ses propres messages
+            if (m.getSender().getUuid().equals(currentUser.getUuid())) return;
+
+            // Ne compter que les DM adressés à l'utilisateur connecté
+            if (!m.getRecipient().equals(currentUser.getUuid())) return;
+
+            UUID senderUuid = m.getSender().getUuid();
+
+            // Ne pas compter si la conversation avec cet expéditeur est déjà ouverte
+            if (senderUuid.equals(currentlyViewingUuid)) return;
+
+            unreadCounts.merge(senderUuid, 1, Integer::sum);
+            userList.repaint();
+        });
+    }
+
+    /**
+     * Marque tous les DM d'un utilisateur comme lus (CHN-009).
+     *
+     * @param userUuid UUID de l'utilisateur dont la conversation est ouverte
+     */
+    public void markAsRead(UUID userUuid) {
+        currentlyViewingUuid = userUuid;
+        unreadCounts.remove(userUuid);
+        userList.repaint();
+    }
+
     @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
     @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
     @Override public void notifyChannelAdded(Channel c)    { /* Non utilisé */ }
@@ -153,23 +195,43 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     @Override public void notifyChannelModified(Channel c) { /* Non utilisé */ }
 
     private class UserListCellRenderer extends DefaultListCellRenderer {
+        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
+        private  final Color COLOR_TEXT     = new Color(30, 41, 59);
+
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            if (value instanceof User) {
-                User user = (User) value;
-                String statusIcon = user.isOnline() ? "🟢" : "⚫";
-                setText(statusIcon + "  @" + user.getUserTag() + "  (" + user.getName() + ")");
-                setFont(new Font("SansSerif", Font.PLAIN, 12));
-                setToolTipText("UUID: " + user.getUuid());
+            if (!(value instanceof User)) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                return this;
             }
-            setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            if (!isSelected) {
-                setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
-                setForeground(new Color(30, 41, 59));
+            User user = (User) value;
+            int unread = unreadCounts.getOrDefault(user.getUuid(), 0);
+
+            JPanel cell = new JPanel(new BorderLayout(4, 0));
+            cell.setOpaque(true);
+            cell.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+            cell.setBackground(isSelected ? list.getSelectionBackground()
+                    : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
+
+            String statusIcon = user.isOnline() ? "🟢" : "⚫";
+            JLabel nameLabel = new JLabel(statusIcon + "  @" + user.getUserTag() + "  (" + user.getName() + ")");
+            nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
+            nameLabel.setForeground(isSelected ? list.getSelectionForeground() : COLOR_TEXT);
+            nameLabel.setToolTipText("UUID: " + user.getUuid());
+            cell.add(nameLabel, BorderLayout.CENTER);
+
+            if (unread > 0) {
+                JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(COLOR_BADGE_BG);
+                badge.setOpaque(true);
+                badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
+                cell.add(badge, BorderLayout.EAST);
             }
-            return this;
+
+            return cell;
         }
     }
 

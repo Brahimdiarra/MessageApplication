@@ -1,0 +1,7 @@
+#
+#Wed Mar 11 01:57:43 CET 2026
+Date=1773190663942
+Sender=2efea7e9-d4f2-43eb-b20d-11589817211d
+Text=cv
+Recipient=202c78cc-ad17-4269-9918-cf1028491288
+UUID=72e8c64e-bd68-4137-961c-cd3f5b14e70f

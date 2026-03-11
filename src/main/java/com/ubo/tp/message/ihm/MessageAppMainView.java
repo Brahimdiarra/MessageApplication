@@ -545,6 +545,7 @@ public class MessageAppMainView extends JFrame {
                 if (selectedUser != null) {
                     System.out.println("[INFO] Utilisateur sélectionné : " + selectedUser.getUserTag());
                     messageListPanel.filterByUser(selectedUser.getUuid());
+                    userListPanel.markAsRead(selectedUser.getUuid());
                 }
             }
         });
@@ -556,6 +557,7 @@ public class MessageAppMainView extends JFrame {
                 if (selectedChannel != null) {
                     System.out.println("[INFO] Canal sélectionné : " + selectedChannel.getName());
                     messageListPanel.filterByChannel(selectedChannel.getUuid());
+                    channelListPanel.markAsRead(selectedChannel.getUuid());
                 }
             }
         });

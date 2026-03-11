@@ -14,7 +14,10 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Panel d'affichage de la liste des canaux avec barre de recherche (CHN-002).
@@ -31,6 +34,12 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
     /** Liste complète de tous les canaux (avant filtre de recherche). */
     private final List<Channel> allChannels = new ArrayList<>();
+
+    /** Compteurs de messages non lus par UUID de canal (CHN-009). */
+    private final Map<UUID, Integer> unreadCounts = new HashMap<>();
+
+    /** UUID du canal actuellement affiché (pour ne pas compter ses nouveaux messages). */
+    private UUID currentlyViewingUuid = null;
 
     /**
      * Constructeur.
@@ -282,7 +291,37 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
     @Override
     public void notifyMessageAdded(Message addedMessage) {
-        // Non utilisé
+        SwingUtilities.invokeLater(() -> {
+            User currentUser = SessionManager.getInstance().getCurrentUser();
+            if (currentUser == null) return;
+
+            // Ignorer ses propres messages
+            if (addedMessage.getSender().getUuid().equals(currentUser.getUuid())) return;
+
+            UUID recipient = addedMessage.getRecipient();
+
+            // Vérifier si le destinataire est un canal connu
+            boolean isChannelMessage = allChannels.stream()
+                    .anyMatch(c -> c.getUuid().equals(recipient));
+            if (!isChannelMessage) return;
+
+            // Ne pas compter si ce canal est actuellement affiché
+            if (recipient.equals(currentlyViewingUuid)) return;
+
+            unreadCounts.merge(recipient, 1, Integer::sum);
+            channelList.repaint();
+        });
+    }
+
+    /**
+     * Marque tous les messages d'un canal comme lus (CHN-009).
+     *
+     * @param channelUuid UUID du canal sélectionné
+     */
+    public void markAsRead(UUID channelUuid) {
+        currentlyViewingUuid = channelUuid;
+        unreadCounts.remove(channelUuid);
+        channelList.repaint();
     }
 
     @Override
@@ -314,26 +353,42 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
      * Renderer personnalisé pour les canaux.
      */
     private class ChannelListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_CHANNEL = new Color(109, 40, 217);
+        private  final Color COLOR_CHANNEL  = new Color(109, 40, 217);
+        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (!(value instanceof Channel)) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                return this;
+            }
+            Channel channel = (Channel) value;
+            int unread = unreadCounts.getOrDefault(channel.getUuid(), 0);
 
-            if (value instanceof Channel) {
-                Channel channel = (Channel) value;
-                setText("  #  " + channel.getName());
-                setFont(new Font("SansSerif", Font.PLAIN, 12));
-                setToolTipText("Créateur : " + channel.getCreator().getName());
+            JPanel cell = new JPanel(new BorderLayout(4, 0));
+            cell.setOpaque(true);
+            cell.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            cell.setBackground(isSelected ? list.getSelectionBackground()
+                    : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
+
+            JLabel nameLabel = new JLabel("  #  " + channel.getName());
+            nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
+            nameLabel.setForeground(isSelected ? list.getSelectionForeground() : COLOR_CHANNEL);
+            nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
+            cell.add(nameLabel, BorderLayout.CENTER);
+
+            if (unread > 0) {
+                JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(COLOR_BADGE_BG);
+                badge.setOpaque(true);
+                badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
+                cell.add(badge, BorderLayout.EAST);
             }
 
-            setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-            if (!isSelected) {
-                setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
-                setForeground(COLOR_CHANNEL);
-            }
-            return this;
+            return cell;
         }
     }
 
