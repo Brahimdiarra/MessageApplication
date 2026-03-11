@@ -15,6 +15,7 @@ import java.awt.*;
  * @author BRAHIM
  */
 public class AuthenticationView extends JFrame {
+    private static final long serialVersionUID = 1L;
 
     // ============================================
     // CONSTANTES

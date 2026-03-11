@@ -14,12 +14,13 @@ import java.awt.event.MouseEvent;
  * @author BRAHIM
  */
 public class ToastNotification extends JWindow {
+    private static final long serialVersionUID = 1L;
 
-    private static final Color COLOR_BG      = new Color(30, 58, 138);  // bleu foncé
+    private static final Color COLOR_BG = new Color(30, 58, 138); // bleu foncé
     private static final Color COLOR_BODY_BG = new Color(239, 246, 255); // bleu très clair
-    private static final Color COLOR_BORDER  = new Color(59, 130, 246);  // bleu vif
-    private static final int   DISPLAY_MS    = 5000;
-    private static final int   WIDTH         = 320;
+    private static final Color COLOR_BORDER = new Color(59, 130, 246); // bleu vif
+    private static final int DISPLAY_MS = 5000;
+    private static final int WIDTH = 320;
 
     private ToastNotification(Window parent, String title, String body) {
         super(parent);
@@ -71,10 +72,16 @@ public class ToastNotification extends JWindow {
 
         // Fermer au clic
         addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { dispose(); }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dispose();
+            }
         });
         content.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { dispose(); }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dispose();
+            }
         });
 
         // Auto-fermeture après DISPLAY_MS ms
@@ -86,7 +93,7 @@ public class ToastNotification extends JWindow {
     private void positionBottomRight(Window parent) {
         if (parent != null && parent.isVisible()) {
             Rectangle parentBounds = parent.getBounds();
-            int x = parentBounds.x + parentBounds.width  - getWidth()  - 16;
+            int x = parentBounds.x + parentBounds.width - getWidth() - 16;
             int y = parentBounds.y + parentBounds.height - getHeight() - 48;
             setLocation(x, y);
         } else {

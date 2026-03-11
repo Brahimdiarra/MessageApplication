@@ -18,6 +18,7 @@ import java.util.List;
  * @author BRAHIM
  */
 public class ChannelCreationDialog extends JDialog {
+    private static final long serialVersionUID = 1L;
 
     private JTextField channelNameField;
     private JRadioButton publicRadio;
@@ -131,8 +132,7 @@ public class ChannelCreationDialog extends JDialog {
                     this,
                     "Le nom du canal ne peut pas être vide !",
                     "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -142,8 +142,7 @@ public class ChannelCreationDialog extends JDialog {
                     this,
                     "Le nom du canal ne peut contenir que des lettres, chiffres, tirets et underscores.",
                     "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -154,8 +153,7 @@ public class ChannelCreationDialog extends JDialog {
                     this,
                     "Erreur : aucun utilisateur connecté !",
                     "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -187,8 +185,7 @@ public class ChannelCreationDialog extends JDialog {
                     getParent(),
                     "Canal \"" + channelName + "\" créé avec succès !",
                     "Succès",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    JOptionPane.INFORMATION_MESSAGE);
 
         } catch (Exception e) {
             System.err.println("[ERREUR] Échec de la création du canal : " + e.getMessage());
@@ -198,8 +195,7 @@ public class ChannelCreationDialog extends JDialog {
                     this,
                     "Erreur lors de la création du canal : " + e.getMessage(),
                     "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 

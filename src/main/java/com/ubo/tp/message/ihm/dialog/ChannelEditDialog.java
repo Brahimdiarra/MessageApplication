@@ -15,13 +15,14 @@ import java.util.Set;
  * Dialogue de modification d'un canal.
  *
  * Règles :
- *  - Créateur d'un canal PUBLIC  → peut renommer le canal uniquement
- *  - Créateur d'un canal PRIVÉ   → peut renommer + ajouter/retirer des membres
- *  - Membre non-créateur (privé) → peut seulement quitter le canal
+ * - Créateur d'un canal PUBLIC → peut renommer le canal uniquement
+ * - Créateur d'un canal PRIVÉ → peut renommer + ajouter/retirer des membres
+ * - Membre non-créateur (privé) → peut seulement quitter le canal
  *
  * @author BRAHIM
  */
 public class ChannelEditDialog extends JDialog {
+    private static final long serialVersionUID = 1L;
 
     private Channel channel;
     private DataManager dataManager;
@@ -45,7 +46,7 @@ public class ChannelEditDialog extends JDialog {
 
         boolean isPrivate = !channel.getUsers().isEmpty();
         boolean isCreator = channel.getCreator().getUuid().equals(currentUser.getUuid());
-        boolean isMember  = channel.getUsers().stream()
+        boolean isMember = channel.getUsers().stream()
                 .anyMatch(u -> u.getUuid().equals(currentUser.getUuid()));
 
         // ── EN-TÊTE : infos du canal ─────────────────────────────────────────
@@ -54,8 +55,7 @@ public class ChannelEditDialog extends JDialog {
         String type = isPrivate ? "Privé" : "Public";
         headerPanel.add(new JLabel(
                 "<html><b>#" + channel.getName() + "</b>  |  Type : " + type
-                        + "  |  Créateur : @" + channel.getCreator().getUserTag() + "</html>"
-        ));
+                        + "  |  Créateur : @" + channel.getCreator().getUserTag() + "</html>"));
         add(headerPanel, BorderLayout.NORTH);
 
         // ── CENTRE : contenu selon le rôle ───────────────────────────────────
@@ -102,16 +102,20 @@ public class ChannelEditDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Label
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.2;
         panel.add(new JLabel("Nouveau nom :"), gbc);
 
         // Champ texte pré-rempli avec le nom actuel
-        gbc.gridx = 1; gbc.weightx = 0.6;
+        gbc.gridx = 1;
+        gbc.weightx = 0.6;
         nameField = new JTextField(channel.getName(), 15);
         panel.add(nameField, gbc);
 
         // Bouton Sauvegarder
-        gbc.gridx = 2; gbc.weightx = 0.2;
+        gbc.gridx = 2;
+        gbc.weightx = 0.2;
         JButton saveButton = new JButton("Sauvegarder");
         saveButton.addActionListener(e -> renameChannel());
         panel.add(saveButton, gbc);
@@ -133,14 +137,18 @@ public class ChannelEditDialog extends JDialog {
         gbc.insets = new Insets(6, 8, 6, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.2;
         renamePanel.add(new JLabel("Nouveau nom :"), gbc);
 
-        gbc.gridx = 1; gbc.weightx = 0.6;
+        gbc.gridx = 1;
+        gbc.weightx = 0.6;
         nameField = new JTextField(channel.getName(), 15);
         renamePanel.add(nameField, gbc);
 
-        gbc.gridx = 2; gbc.weightx = 0.2;
+        gbc.gridx = 2;
+        gbc.weightx = 0.2;
         JButton saveButton = new JButton("Sauvegarder");
         saveButton.addActionListener(e -> renameChannel());
         renamePanel.add(saveButton, gbc);
@@ -154,7 +162,8 @@ public class ChannelEditDialog extends JDialog {
     }
 
     /**
-     * Les deux listes : membres actuels (retirer) + utilisateurs disponibles (ajouter).
+     * Les deux listes : membres actuels (retirer) + utilisateurs disponibles
+     * (ajouter).
      */
     private JPanel buildMembersManagementPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 10, 0));
@@ -251,7 +260,8 @@ public class ChannelEditDialog extends JDialog {
     // ── Actions ──────────────────────────────────────────────────────────────
 
     /**
-     * Renomme le canal : crée un nouveau Channel avec le même UUID mais un nouveau nom.
+     * Renomme le canal : crée un nouveau Channel avec le même UUID mais un nouveau
+     * nom.
      */
     private void renameChannel() {
         String newName = nameField.getText().trim();
@@ -280,8 +290,7 @@ public class ChannelEditDialog extends JDialog {
                 channel.getUuid(),
                 channel.getCreator(),
                 newName,
-                channel.getUsers()
-        );
+                channel.getUsers());
         dataManager.sendChannel(renamed);
         this.channel = renamed;
 
@@ -330,9 +339,11 @@ public class ChannelEditDialog extends JDialog {
     // ── Renderer ─────────────────────────────────────────────────────────────
 
     private class UserCellRenderer extends DefaultListCellRenderer {
+        private static final long serialVersionUID = 1L;
+
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
+                int index, boolean isSelected, boolean cellHasFocus) {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             if (value instanceof User) {
                 User u = (User) value;

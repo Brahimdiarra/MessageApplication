@@ -13,7 +13,7 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
+import java.awt.geom.Rectangle2D;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
  * @author BRAHIM
  */
 public class MessageSendPanel extends JPanel implements IDatabaseObserver {
+    private static final long serialVersionUID = 1L;
 
     private JTextArea messageTextArea;
     private JButton sendButton;
@@ -41,46 +42,46 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
     /** Table de correspondance raccourci → emoji. */
     private static final Map<String, String> EMOJI_MAP = new LinkedHashMap<>();
     static {
-        EMOJI_MAP.put(":smile:",      "\uD83D\uDE0A");
-        EMOJI_MAP.put(":smirk:",      "\uD83D\uDE0F");
-        EMOJI_MAP.put(":sad:",        "\uD83D\uDE22");
-        EMOJI_MAP.put(":heart:",      "\u2764\uFE0F");
-        EMOJI_MAP.put(":fire:",       "\uD83D\uDD25");
-        EMOJI_MAP.put(":thumbsup:",   "\uD83D\uDC4D");
+        EMOJI_MAP.put(":smile:", "\uD83D\uDE0A");
+        EMOJI_MAP.put(":smirk:", "\uD83D\uDE0F");
+        EMOJI_MAP.put(":sad:", "\uD83D\uDE22");
+        EMOJI_MAP.put(":heart:", "\u2764\uFE0F");
+        EMOJI_MAP.put(":fire:", "\uD83D\uDD25");
+        EMOJI_MAP.put(":thumbsup:", "\uD83D\uDC4D");
         EMOJI_MAP.put(":thumbsdown:", "\uD83D\uDC4E");
-        EMOJI_MAP.put(":laugh:",      "\uD83D\uDE02");
-        EMOJI_MAP.put(":wink:",       "\uD83D\uDE09");
-        EMOJI_MAP.put(":wow:",        "\uD83D\uDE2E");
-        EMOJI_MAP.put(":party:",      "\uD83C\uDF89");
-        EMOJI_MAP.put(":eyes:",       "\uD83D\uDC40");
-        EMOJI_MAP.put(":star:",       "\u2B50");
-        EMOJI_MAP.put(":check:",      "\u2705");
-        EMOJI_MAP.put(":wave:",       "\uD83D\uDC4B");
-        EMOJI_MAP.put(":clap:",       "\uD83D\uDC4F");
-        EMOJI_MAP.put(":100:",        "\uD83D\uDCAF");
-        EMOJI_MAP.put(":rocket:",     "\uD83D\uDE80");
+        EMOJI_MAP.put(":laugh:", "\uD83D\uDE02");
+        EMOJI_MAP.put(":wink:", "\uD83D\uDE09");
+        EMOJI_MAP.put(":wow:", "\uD83D\uDE2E");
+        EMOJI_MAP.put(":party:", "\uD83C\uDF89");
+        EMOJI_MAP.put(":eyes:", "\uD83D\uDC40");
+        EMOJI_MAP.put(":star:", "\u2B50");
+        EMOJI_MAP.put(":check:", "\u2705");
+        EMOJI_MAP.put(":wave:", "\uD83D\uDC4B");
+        EMOJI_MAP.put(":clap:", "\uD83D\uDC4F");
+        EMOJI_MAP.put(":100:", "\uD83D\uDCAF");
+        EMOJI_MAP.put(":rocket:", "\uD83D\uDE80");
     }
     /** Couleur de fond pour chaque emoji dans le sélecteur (compatible Java 8). */
     private static final Map<String, Color> EMOJI_COLORS = new LinkedHashMap<>();
     static {
-        EMOJI_COLORS.put(":smile:",      new Color(255, 230, 100));
-        EMOJI_COLORS.put(":smirk:",      new Color(255, 200,  80));
-        EMOJI_COLORS.put(":sad:",        new Color(147, 197, 253));
-        EMOJI_COLORS.put(":heart:",      new Color(252, 165, 165));
-        EMOJI_COLORS.put(":fire:",       new Color(253, 186,  74));
-        EMOJI_COLORS.put(":thumbsup:",   new Color( 94, 234, 212));
+        EMOJI_COLORS.put(":smile:", new Color(255, 230, 100));
+        EMOJI_COLORS.put(":smirk:", new Color(255, 200, 80));
+        EMOJI_COLORS.put(":sad:", new Color(147, 197, 253));
+        EMOJI_COLORS.put(":heart:", new Color(252, 165, 165));
+        EMOJI_COLORS.put(":fire:", new Color(253, 186, 74));
+        EMOJI_COLORS.put(":thumbsup:", new Color(94, 234, 212));
         EMOJI_COLORS.put(":thumbsdown:", new Color(196, 181, 253));
-        EMOJI_COLORS.put(":laugh:",      new Color(254, 240, 138));
-        EMOJI_COLORS.put(":wink:",       new Color(253, 224, 132));
-        EMOJI_COLORS.put(":wow:",        new Color(134, 239, 172));
-        EMOJI_COLORS.put(":party:",      new Color(216, 180, 254));
-        EMOJI_COLORS.put(":eyes:",       new Color(186, 230, 253));
-        EMOJI_COLORS.put(":star:",       new Color(253, 224,  71));
-        EMOJI_COLORS.put(":check:",      new Color(134, 239, 172));
-        EMOJI_COLORS.put(":wave:",       new Color(147, 197, 253));
-        EMOJI_COLORS.put(":clap:",       new Color(253, 186,  74));
-        EMOJI_COLORS.put(":100:",        new Color(252, 165, 165));
-        EMOJI_COLORS.put(":rocket:",     new Color(147, 197, 253));
+        EMOJI_COLORS.put(":laugh:", new Color(254, 240, 138));
+        EMOJI_COLORS.put(":wink:", new Color(253, 224, 132));
+        EMOJI_COLORS.put(":wow:", new Color(134, 239, 172));
+        EMOJI_COLORS.put(":party:", new Color(216, 180, 254));
+        EMOJI_COLORS.put(":eyes:", new Color(186, 230, 253));
+        EMOJI_COLORS.put(":star:", new Color(253, 224, 71));
+        EMOJI_COLORS.put(":check:", new Color(134, 239, 172));
+        EMOJI_COLORS.put(":wave:", new Color(147, 197, 253));
+        EMOJI_COLORS.put(":clap:", new Color(253, 186, 74));
+        EMOJI_COLORS.put(":100:", new Color(252, 165, 165));
+        EMOJI_COLORS.put(":rocket:", new Color(147, 197, 253));
     }
 
     /**
@@ -129,8 +130,7 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         JScrollPane scrollPane = new JScrollPane(messageTextArea);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(4, 6, 4, 6),
-                BorderFactory.createLineBorder(new Color(203, 213, 225))
-        ));
+                BorderFactory.createLineBorder(new Color(203, 213, 225))));
 
         // Panel du bas : compteur de caractères
         charCountLabel = new JLabel("0/200");
@@ -186,11 +186,15 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
                 updateCharCount();
                 SwingUtilities.invokeLater(MessageSendPanel.this::checkAutocomplete);
             }
+
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
                 updateCharCount();
                 SwingUtilities.invokeLater(MessageSendPanel.this::hideAutocomplete);
             }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCharCount(); }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateCharCount();
+            }
 
             private void updateCharCount() {
                 int count = messageTextArea.getText().length();
@@ -358,7 +362,8 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         }
     }
 
-    // ── IDatabaseObserver : rafraîchit la liste des destinataires à chaque changement ──
+    // ── IDatabaseObserver : rafraîchit la liste des destinataires à chaque
+    // changement ──
 
     @Override
     public void notifyChannelAdded(Channel addedChannel) {
@@ -390,14 +395,24 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(this::loadRecipients);
     }
 
-    @Override public void notifyMessageAdded(Message m)    { /* Non utilisé */ }
-    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
-    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
+    @Override
+    public void notifyMessageAdded(Message m) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyMessageDeleted(Message m) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyMessageModified(Message m) {
+        /* Non utilisé */ }
 
     /**
      * Renderer personnalisé pour la liste déroulante des destinataires.
      */
     private class RecipientCellRenderer extends DefaultListCellRenderer {
+        private static final long serialVersionUID = 1L;
+
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                 int index, boolean isSelected, boolean cellHasFocus) {
@@ -432,29 +447,47 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         return text;
     }
 
-    /** Vérifie le texte courant et affiche le popup d'autocomplétion si pertinent. */
+    /**
+     * Vérifie le texte courant et affiche le popup d'autocomplétion si pertinent.
+     */
     private void checkAutocomplete() {
         String text = messageTextArea.getText();
         int caretPos = messageTextArea.getCaretPosition();
-        if (caretPos == 0) { hideAutocomplete(); return; }
+        if (caretPos == 0) {
+            hideAutocomplete();
+            return;
+        }
 
         // Trouver le ":" le plus récent avant le caret
         int colonPos = -1;
         for (int i = caretPos - 1; i >= 0; i--) {
             char ch = text.charAt(i);
-            if (ch == ':'  ) { colonPos = i; break; }
-            if (ch == ' ' || ch == '\n') break;
+            if (ch == ':') {
+                colonPos = i;
+                break;
+            }
+            if (ch == ' ' || ch == '\n')
+                break;
         }
-        if (colonPos < 0) { hideAutocomplete(); return; }
+        if (colonPos < 0) {
+            hideAutocomplete();
+            return;
+        }
 
         String partial = text.substring(colonPos, caretPos); // ex: ":sm"
         // On n'affiche pas si le raccourci est déjà fermé
-        if (partial.length() > 1 && partial.endsWith(":")) { hideAutocomplete(); return; }
+        if (partial.length() > 1 && partial.endsWith(":")) {
+            hideAutocomplete();
+            return;
+        }
 
         List<String> matches = EMOJI_MAP.keySet().stream()
                 .filter(k -> k.startsWith(partial) && !k.equals(partial))
                 .collect(Collectors.toList());
-        if (matches.isEmpty()) { hideAutocomplete(); return; }
+        if (matches.isEmpty()) {
+            hideAutocomplete();
+            return;
+        }
 
         autocompleteColonPos = colonPos;
         showAutocompletePopup(matches);
@@ -473,19 +506,26 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
                     int caret = messageTextArea.getCaretPosition();
                     messageTextArea.getDocument().remove(pos, caret - pos);
                     messageTextArea.getDocument().insertString(pos, emoji, null);
-                } catch (Exception ex) { /* ignore */ }
+                } catch (Exception ex) {
+                    /* ignore */ }
             }));
             autocompletePopup.add(item);
         }
         try {
-            java.awt.Rectangle r = messageTextArea.modelToView(autocompleteColonPos);
-            if (r != null) autocompletePopup.show(messageTextArea, r.x, r.y - autocompletePopup.getPreferredSize().height - 4);
-        } catch (Exception ex) { /* ignore */ }
+            Rectangle2D r2d = messageTextArea.modelToView2D(autocompleteColonPos);
+            if (r2d != null) {
+                int x = (int) r2d.getX();
+                int y = (int) r2d.getY();
+                autocompletePopup.show(messageTextArea, x, y - autocompletePopup.getPreferredSize().height - 4);
+            }
+        } catch (Exception ex) {
+            /* ignore */ }
     }
 
     /** Cache le popup d'autocomplétion. */
     private void hideAutocomplete() {
-        if (autocompletePopup.isVisible()) autocompletePopup.setVisible(false);
+        if (autocompletePopup.isVisible())
+            autocompletePopup.setVisible(false);
     }
 
     /** Affiche un sélecteur d'emoji visuel (grille). */
@@ -507,13 +547,22 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
                     BorderFactory.createEmptyBorder(4, 6, 4, 6)));
             lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             lbl.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
                     messageTextArea.insert(entry.getValue(), messageTextArea.getCaretPosition());
                     picker.setVisible(false);
                     messageTextArea.requestFocusInWindow();
                 }
-                @Override public void mouseEntered(java.awt.event.MouseEvent e) { lbl.setBackground(bg.darker()); }
-                @Override public void mouseExited(java.awt.event.MouseEvent e)  { lbl.setBackground(bg); }
+
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent e) {
+                    lbl.setBackground(bg.darker());
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent e) {
+                    lbl.setBackground(bg);
+                }
             });
             grid.add(lbl);
         }

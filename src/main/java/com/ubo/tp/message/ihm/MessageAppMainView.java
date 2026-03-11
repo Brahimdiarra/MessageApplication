@@ -25,16 +25,17 @@ import java.io.File;
  * @author S.Lucas / BRAHIM
  */
 public class MessageAppMainView extends JFrame {
+    private static final long serialVersionUID = 1L;
 
     private static final String APP_TITLE = "Application de Messagerie";
     private static final String APP_VERSION = "Version 1.0";
     private static final String APP_AUTHOR = "Développé par BRAHIM";
 
     // ── Palette de couleurs de l'application ─────────────────────────────
-    public static final Color COLOR_PRIMARY    = new Color(30, 58, 138);  // bleu foncé header
-    public static final Color COLOR_ACCENT     = new Color(59, 130, 246); // bleu vif bordures/titres
-    public static final Color COLOR_BG         = new Color(248, 250, 252); // fond général très clair
-    public static final Color COLOR_PANEL_BG   = Color.WHITE;
+    public static final Color COLOR_PRIMARY = new Color(30, 58, 138); // bleu foncé header
+    public static final Color COLOR_ACCENT = new Color(59, 130, 246); // bleu vif bordures/titres
+    public static final Color COLOR_BG = new Color(248, 250, 252); // fond général très clair
+    public static final Color COLOR_PANEL_BG = Color.WHITE;
 
     private JLabel headerUserLabel;
 
@@ -46,7 +47,6 @@ public class MessageAppMainView extends JFrame {
 
     private MessageApp messageApp;
     private AuthenticationView authenticationView;
-    private User currentUser;
 
     // Panels d'affichage
     private UserListPanel userListPanel;
@@ -62,7 +62,6 @@ public class MessageAppMainView extends JFrame {
      */
     public MessageAppMainView(MessageApp messageApp, User currentUser) {
         this.messageApp = messageApp;
-        this.currentUser = currentUser;
         initComponents();
     }
 
@@ -134,8 +133,6 @@ public class MessageAppMainView extends JFrame {
 
         System.out.println("[INFO] Vue principale affichée pour : " + userTag);
     }
-
-
 
     /**
      * Enregistre les panels comme observateurs de la base de données.
@@ -280,8 +277,7 @@ public class MessageAppMainView extends JFrame {
                 "Application de messagerie développée dans le cadre\n" +
                         "du Master 2 TIIL-A à l'Université de Bretagne Occidentale.\n\n" +
                         "Cette application permet l'échange de messages\n" +
-                        "entre utilisateurs via un répertoire partagé."
-        );
+                        "entre utilisateurs via un répertoire partagé.");
         descriptionArea.setEditable(false);
         descriptionArea.setOpaque(false);
         descriptionArea.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -292,8 +288,7 @@ public class MessageAppMainView extends JFrame {
                 this,
                 aboutPanel,
                 "À propos",
-                JOptionPane.PLAIN_MESSAGE
-        );
+                JOptionPane.PLAIN_MESSAGE);
     }
 
     /**
@@ -361,16 +356,14 @@ public class MessageAppMainView extends JFrame {
                         this,
                         "Répertoire d'échange configuré : \n" + selectedDirectory.getAbsolutePath(),
                         "Succès",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
+                        JOptionPane.INFORMATION_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(
                         this,
                         "Le répertoire sélectionné n'est pas valide.\n" +
                                 "Assurez-vous qu'il existe et qu'il est accessible en lecture/écriture.",
                         "Erreur",
-                        JOptionPane.ERROR_MESSAGE
-                );
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -384,8 +377,7 @@ public class MessageAppMainView extends JFrame {
                 "Voulez-vous vraiment vous déconnecter ?",
                 "Confirmation",
                 JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-        );
+                JOptionPane.QUESTION_MESSAGE);
 
         if (result == JOptionPane.YES_OPTION) {
             System.out.println("[INFO] Déconnexion de l'utilisateur");
@@ -409,8 +401,7 @@ public class MessageAppMainView extends JFrame {
                 "Voulez-vous vraiment quitter l'application ?",
                 "Confirmation",
                 JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-        );
+                JOptionPane.QUESTION_MESSAGE);
 
         if (result == JOptionPane.YES_OPTION) {
             System.out.println("[INFO] Fermeture de l'application...");
@@ -469,8 +460,7 @@ public class MessageAppMainView extends JFrame {
      */
     private ImageIcon createDefaultIcon() {
         java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
-                16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB
-        );
+                16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = img.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setColor(new Color(70, 130, 180));
@@ -511,8 +501,7 @@ public class MessageAppMainView extends JFrame {
         leftPanel.setBackground(new Color(241, 245, 249));
         leftPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(203, 213, 225)),
-                BorderFactory.createEmptyBorder(4, 4, 4, 8)
-        ));
+                BorderFactory.createEmptyBorder(4, 4, 4, 8)));
 
         userListPanel = new UserListPanel();
         channelListPanel = new ChannelListPanel();
@@ -577,17 +566,19 @@ public class MessageAppMainView extends JFrame {
     public void triggerParty() {
         int w = getWidth(), h = getHeight();
         int NUM = 90;
-        float[] x  = new float[NUM]; float[] y  = new float[NUM];
-        float[] vx = new float[NUM]; float[] vy = new float[NUM];
+        float[] x = new float[NUM];
+        float[] y = new float[NUM];
+        float[] vx = new float[NUM];
+        float[] vy = new float[NUM];
         Color[] palette = {
-            new Color(255,  87,  51), new Color(255, 195,   0),
-            new Color( 47, 213, 133), new Color( 37,  99, 235),
-            new Color(168,  85, 247), new Color(255, 110, 199)
+                new Color(255, 87, 51), new Color(255, 195, 0),
+                new Color(47, 213, 133), new Color(37, 99, 235),
+                new Color(168, 85, 247), new Color(255, 110, 199)
         };
         Random rand = new Random();
         for (int i = 0; i < NUM; i++) {
-            x[i]  = rand.nextFloat() * w;
-            y[i]  = -rand.nextFloat() * h;
+            x[i] = rand.nextFloat() * w;
+            y[i] = -rand.nextFloat() * h;
             vx[i] = (rand.nextFloat() - 0.5f) * 5;
             vy[i] = 3 + rand.nextFloat() * 5;
         }
@@ -595,7 +586,8 @@ public class MessageAppMainView extends JFrame {
         overlay.setBounds(getBounds());
         overlay.setBackground(new Color(0, 0, 0, 0));
         JPanel canvas = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
+            @Override
+            protected void paintComponent(Graphics g) {
                 // fond transparent
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setColor(new Color(0, 0, 0, 0));
@@ -603,8 +595,10 @@ public class MessageAppMainView extends JFrame {
                 for (int i = 0; i < NUM; i++) {
                     g2.setColor(palette[i % palette.length]);
                     int size = 8 + (i % 5) * 2;
-                    if (i % 3 == 0) g2.fillOval((int)x[i], (int)y[i], size, size);
-                    else            g2.fillRect((int)x[i], (int)y[i], size+2, size/2+3);
+                    if (i % 3 == 0)
+                        g2.fillOval((int) x[i], (int) y[i], size, size);
+                    else
+                        g2.fillRect((int) x[i], (int) y[i], size + 2, size / 2 + 3);
                 }
                 g2.dispose();
             }
@@ -612,15 +606,22 @@ public class MessageAppMainView extends JFrame {
         canvas.setOpaque(false);
         overlay.add(canvas);
         overlay.setVisible(true);
-        int[] frames = {0};
+        int[] frames = { 0 };
         Timer t = new Timer(30, null);
         t.addActionListener(ae -> {
             for (int i = 0; i < NUM; i++) {
-                x[i] += vx[i]; y[i] += vy[i];
-                if (y[i] > h) { y[i] = -20; x[i] = rand.nextFloat() * w; }
+                x[i] += vx[i];
+                y[i] += vy[i];
+                if (y[i] > h) {
+                    y[i] = -20;
+                    x[i] = rand.nextFloat() * w;
+                }
             }
             canvas.repaint();
-            if (++frames[0] > 100) { t.stop(); overlay.dispose(); }
+            if (++frames[0] > 100) {
+                t.stop();
+                overlay.dispose();
+            }
         });
         t.start();
     }
@@ -634,11 +635,12 @@ public class MessageAppMainView extends JFrame {
         printAll(img.createGraphics());
         JWindow overlay = new JWindow(this);
         overlay.setBounds(getBounds());
-        double[] angle = {0};
-        int[]    state = {0}; // 0=aller 1=pause 2=retour
-        int[]    pause = {0};
+        double[] angle = { 0 };
+        int[] state = { 0 }; // 0=aller 1=pause 2=retour
+        int[] pause = { 0 };
         JPanel canvas = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
+            @Override
+            protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
@@ -657,9 +659,25 @@ public class MessageAppMainView extends JFrame {
         Timer t = new Timer(12, null);
         t.addActionListener(ae -> {
             switch (state[0]) {
-                case 0: angle[0] += 7; if (angle[0] >= 180) { angle[0] = 180; state[0] = 1; } break;
-                case 1: if (++pause[0] >= 35) state[0] = 2; break;
-                case 2: angle[0] -= 7; if (angle[0] <= 0) { t.stop(); overlay.dispose(); return; } break;
+                case 0:
+                    angle[0] += 7;
+                    if (angle[0] >= 180) {
+                        angle[0] = 180;
+                        state[0] = 1;
+                    }
+                    break;
+                case 1:
+                    if (++pause[0] >= 35)
+                        state[0] = 2;
+                    break;
+                case 2:
+                    angle[0] -= 7;
+                    if (angle[0] <= 0) {
+                        t.stop();
+                        overlay.dispose();
+                        return;
+                    }
+                    break;
             }
             canvas.repaint();
         });
@@ -671,14 +689,17 @@ public class MessageAppMainView extends JFrame {
      */
     public void triggerEarthquake() {
         Point orig = getLocation();
-        int[] offsets = {0, 14, -14, 10, -10, 16, -16, 8, -8, 12, -12, 6, -6, 0};
-        int[] tick = {0};
+        int[] offsets = { 0, 14, -14, 10, -10, 16, -16, 8, -8, 12, -12, 6, -6, 0 };
+        int[] tick = { 0 };
         Timer t = new Timer(30, null);
         t.addActionListener(ae -> {
             int dx = offsets[tick[0] % offsets.length];
             int dy = offsets[(tick[0] + 3) % offsets.length] / 2;
             setLocation(orig.x + dx, orig.y + dy);
-            if (++tick[0] >= 66) { t.stop(); setLocation(orig); }
+            if (++tick[0] >= 66) {
+                t.stop();
+                setLocation(orig);
+            }
         });
         t.start();
     }

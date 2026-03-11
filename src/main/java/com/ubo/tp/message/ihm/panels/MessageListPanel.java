@@ -29,6 +29,7 @@ import main.java.com.ubo.tp.message.ihm.reactions.ReactionStore;
  * @author BRAHIM
  */
 public class MessageListPanel extends JPanel implements IDatabaseObserver {
+    private static final long serialVersionUID = 1L;
 
     private DefaultListModel<Message> messageListModel;
     private JList<Message> messageList;
@@ -40,7 +41,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
     /**
      * Liste complète des messages pour le filtre actif (user ou canal sélectionné).
-     * On garde cette liste pour pouvoir refilter par texte sans reparcourir toute la DB.
+     * On garde cette liste pour pouvoir refilter par texte sans reparcourir toute
+     * la DB.
      */
     private final List<Message> currentMessages = new ArrayList<>();
 
@@ -88,9 +90,17 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher dans les messages (texte ou @auteur)");
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { applySearch(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applySearch();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applySearch();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applySearch();
+            }
         });
         searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -114,7 +124,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         // Clic droit sur un message → sélecteur de réaction
         messageList.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
+            @Override
+            public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isRightMouseButton(e)) {
                     int idx = messageList.locationToIndex(e.getPoint());
                     if (idx >= 0) {
@@ -187,7 +198,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
-     * Supprime le message sélectionné si l'utilisateur connecté en est l'auteur (MSG-006).
+     * Supprime le message sélectionné si l'utilisateur connecté en est l'auteur
+     * (MSG-006).
      */
     private void deleteSelectedMessage() {
         Message selected = getSelectedMessage();
@@ -326,7 +338,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
                 }
             }
 
-            if (!matchesFilter) return;
+            if (!matchesFilter)
+                return;
 
             // Ajouter aux messages courants si pas déjà présent
             boolean exists = currentMessages.stream()
@@ -396,14 +409,14 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private void showReactionPicker(Message msg, Component source, int x, int y) {
         String[] emojis = {
-            "👍", "❤️", "😂", "😮",
-            "😢", "🔥", "🎉", "👀"
+                "👍", "❤️", "😂", "😮",
+                "😢", "🔥", "🎉", "👀"
         };
         Color[] palette = {
-            new Color( 94, 234, 212), new Color(252, 165, 165),
-            new Color(254, 240, 138), new Color(134, 239, 172),
-            new Color(147, 197, 253), new Color(253, 186,  74),
-            new Color(216, 180, 254), new Color(186, 230, 253)
+                new Color(94, 234, 212), new Color(252, 165, 165),
+                new Color(254, 240, 138), new Color(134, 239, 172),
+                new Color(147, 197, 253), new Color(253, 186, 74),
+                new Color(216, 180, 254), new Color(186, 230, 253)
         };
         JPopupMenu popup = new JPopupMenu();
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
@@ -425,15 +438,20 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             lbl.setToolTipText(emoji);
             lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             lbl.addMouseListener(new MouseAdapter() {
-                @Override public void mouseClicked(MouseEvent me) {
+                @Override
+                public void mouseClicked(MouseEvent me) {
                     if (currentUser != null)
                         ReactionStore.getInstance().toggle(msg.getUuid(), emoji, currentUser.getUuid());
                     popup.setVisible(false);
                 }
-                @Override public void mouseEntered(MouseEvent me) {
+
+                @Override
+                public void mouseEntered(MouseEvent me) {
                     lbl.setBackground(bg.darker());
                 }
-                @Override public void mouseExited(MouseEvent me) {
+
+                @Override
+                public void mouseExited(MouseEvent me) {
                     lbl.setBackground(bg);
                 }
             });
@@ -447,22 +465,23 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      * Renderer de style "bulle de conversation" (Messenger / Discord).
      *
      * – Messages du user connecté : bulle bleue alignée à DROITE
-     * – DM reçus               : bulle colorée alignée à GAUCHE
-     * – Messages de canal      : chaque auteur a sa couleur (à GAUCHE),
-     *                              sauf le user connecté (à DROITE en bleu).
+     * – DM reçus : bulle colorée alignée à GAUCHE
+     * – Messages de canal : chaque auteur a sa couleur (à GAUCHE),
+     * sauf le user connecté (à DROITE en bleu).
      */
     private class MessageListCellRenderer extends JPanel implements ListCellRenderer<Message> {
+        private static final long serialVersionUID = 1L;
 
         // Palette de couleurs pour distinguer les auteurs dans un canal
         private final Color[] PALETTE = {
-            new Color(16, 185, 129),  // émeraude
-            new Color(245, 158, 11),  // ambre
-            new Color(239,  68,  68), // rouge vif
-            new Color(168,  85, 247), // violet
-            new Color(236,  72, 153), // rose
-            new Color( 20, 184, 166), // teal
-            new Color(249, 115,  22), // orange
-            new Color( 99, 102, 241), // indigo
+                new Color(16, 185, 129), // émeraude
+                new Color(245, 158, 11), // ambre
+                new Color(239, 68, 68), // rouge vif
+                new Color(168, 85, 247), // violet
+                new Color(236, 72, 153), // rose
+                new Color(20, 184, 166), // teal
+                new Color(249, 115, 22), // orange
+                new Color(99, 102, 241), // indigo
         };
 
         // Bleu pour les messages de l'utilisateur connecté
@@ -480,8 +499,9 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         @Override
         public Component getListCellRendererComponent(JList<? extends Message> list, Message message,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
-            if (message == null) return this;
+                int index, boolean isSelected, boolean cellHasFocus) {
+            if (message == null)
+                return this;
 
             removeAll();
             setLayout(new BorderLayout());
@@ -540,7 +560,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
             // ── Largeur max de la bulle (72 % du panneau) ─────────────────
             int listW = list.getWidth();
-            int maxW  = listW > 80 ? (int) (listW * 0.72) : 400;
+            int maxW = listW > 80 ? (int) (listW * 0.72) : 400;
             bubble.setMaximumSize(new Dimension(maxW, Short.MAX_VALUE));
             // Force le JTextArea à calculer sa hauteur sur la vraie largeur
             textArea.setSize(maxW - 22, Short.MAX_VALUE);
@@ -559,8 +579,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             add(row, BorderLayout.CENTER);
 
             // ── Badges de réactions sous la bulle ─────────────────────────
-            Map<String, Integer> reactions =
-                    ReactionStore.getInstance().getCountsFor(message.getUuid());
+            Map<String, Integer> reactions = ReactionStore.getInstance().getCountsFor(message.getUuid());
             if (!reactions.isEmpty()) {
                 JPanel reactionRow = new JPanel(
                         new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT, 3, 0));
@@ -587,25 +606,31 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         /** Résout le destinataire du message en une chaîne lisible. */
         private String resolveDestination(Message message) {
-            if (dataManager == null) return null;
+            if (dataManager == null)
+                return null;
             UUID id = message.getRecipient();
             for (Channel ch : dataManager.getChannels()) {
-                if (ch.getUuid().equals(id)) return "# " + ch.getName();
+                if (ch.getUuid().equals(id))
+                    return "# " + ch.getName();
             }
             for (User u : dataManager.getUsers()) {
-                if (u.getUuid().equals(id)) return "→ @" + u.getUserTag();
+                if (u.getUuid().equals(id))
+                    return "→ @" + u.getUserTag();
             }
             return null;
         }
     }
 
-    /** Panneau avec fond en rectangle arrondi — utilisé pour les bulles de messages. */
+    /**
+     * Panneau avec fond en rectangle arrondi — utilisé pour les bulles de messages.
+     */
     private static class BubblePanel extends JPanel {
+        private static final long serialVersionUID = 1L;
         private final Color color;
-        private final int   radius;
+        private final int radius;
 
         BubblePanel(Color color, int radius) {
-            this.color  = color;
+            this.color = color;
             this.radius = radius;
             setOpaque(false);
         }

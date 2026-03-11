@@ -1,6 +1,6 @@
 package main.java.com.ubo.tp.message.datamodel;
 
-import java.util.Observable;
+import java.beans.PropertyChangeSupport;
 import java.util.UUID;
 
 /**
@@ -8,7 +8,8 @@ import java.util.UUID;
  *
  * @author S.Lucas
  */
-public abstract class AbstractMessageAppObject extends Observable {
+public abstract class AbstractMessageAppObject {
+	protected final PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 	/**
 	 * Identifiant unique de l'objet.
 	 */

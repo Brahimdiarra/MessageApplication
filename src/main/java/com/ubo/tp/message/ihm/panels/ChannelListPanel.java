@@ -25,6 +25,7 @@ import java.util.UUID;
  * @author BRAHIM
  */
 public class ChannelListPanel extends JPanel implements IDatabaseObserver {
+    private static final long serialVersionUID = 1L;
 
     private DefaultListModel<Channel> channelListModel;
     private JList<Channel> channelList;
@@ -38,7 +39,10 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     /** Compteurs de messages non lus par UUID de canal (CHN-009). */
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
 
-    /** UUID du canal actuellement affiché (pour ne pas compter ses nouveaux messages). */
+    /**
+     * UUID du canal actuellement affiché (pour ne pas compter ses nouveaux
+     * messages).
+     */
     private UUID currentlyViewingUuid = null;
 
     /**
@@ -48,7 +52,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         initComponents();
     }
 
-    //  setter
+    // setter
     public void setDataManager(DataManager dataManager) {
         this.dataManager = dataManager;
     }
@@ -62,8 +66,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
                     this,
                     "Erreur : DataManager non initialisé",
                     "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -99,7 +102,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
-     * Supprime le canal sélectionné (uniquement si l'utilisateur connecté en est le créateur).
+     * Supprime le canal sélectionné (uniquement si l'utilisateur connecté en est le
+     * créateur).
      */
     private void deleteSelectedChannel() {
         Channel selected = getSelectedChannel();
@@ -148,9 +152,17 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher un canal par nom");
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
         });
         searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -186,7 +198,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         JButton newChannelButton = new JButton("+");
         newChannelButton.setToolTipText("Créer un nouveau canal");
         newChannelButton.setPreferredSize(new Dimension(30, 24));
-        newChannelButton.setBackground(new Color(22, 163, 74));  // vert
+        newChannelButton.setBackground(new Color(22, 163, 74)); // vert
         newChannelButton.setForeground(Color.WHITE);
         newChannelButton.setOpaque(true);
         newChannelButton.setBorderPainted(false);
@@ -197,7 +209,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         JButton editChannelButton = new JButton("✏");
         editChannelButton.setToolTipText("Modifier le canal sélectionné");
         editChannelButton.setPreferredSize(new Dimension(30, 24));
-        editChannelButton.setBackground(MessageAppMainView.COLOR_ACCENT);  // bleu
+        editChannelButton.setBackground(MessageAppMainView.COLOR_ACCENT); // bleu
         editChannelButton.setForeground(Color.WHITE);
         editChannelButton.setOpaque(true);
         editChannelButton.setBorderPainted(false);
@@ -207,7 +219,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         JButton deleteChannelButton = new JButton("🗑");
         deleteChannelButton.setToolTipText("Supprimer un canal");
         deleteChannelButton.setPreferredSize(new Dimension(30, 24));
-        deleteChannelButton.setBackground(new Color(220, 38, 38));  // rouge
+        deleteChannelButton.setBackground(new Color(220, 38, 38)); // rouge
         deleteChannelButton.setForeground(Color.WHITE);
         deleteChannelButton.setOpaque(true);
         deleteChannelButton.setBorderPainted(false);
@@ -225,9 +237,18 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
         // Mise à jour du compteur
         channelListModel.addListDataListener(new javax.swing.event.ListDataListener() {
-            public void intervalAdded(javax.swing.event.ListDataEvent e) { updateCount(); }
-            public void intervalRemoved(javax.swing.event.ListDataEvent e) { updateCount(); }
-            public void contentsChanged(javax.swing.event.ListDataEvent e) { updateCount(); }
+            public void intervalAdded(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
+            public void intervalRemoved(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
+            public void contentsChanged(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
             private void updateCount() {
                 countLabel.setText(channelListModel.getSize() + " canal(aux)");
             }
@@ -293,20 +314,24 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     public void notifyMessageAdded(Message addedMessage) {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
-            if (currentUser == null) return;
+            if (currentUser == null)
+                return;
 
             // Ignorer ses propres messages
-            if (addedMessage.getSender().getUuid().equals(currentUser.getUuid())) return;
+            if (addedMessage.getSender().getUuid().equals(currentUser.getUuid()))
+                return;
 
             UUID recipient = addedMessage.getRecipient();
 
             // Vérifier si le destinataire est un canal connu
             boolean isChannelMessage = allChannels.stream()
                     .anyMatch(c -> c.getUuid().equals(recipient));
-            if (!isChannelMessage) return;
+            if (!isChannelMessage)
+                return;
 
             // Ne pas compter si ce canal est actuellement affiché
-            if (recipient.equals(currentlyViewingUuid)) return;
+            if (recipient.equals(currentlyViewingUuid))
+                return;
 
             unreadCounts.merge(recipient, 1, Integer::sum);
             channelList.repaint();
@@ -353,12 +378,13 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
      * Renderer personnalisé pour les canaux.
      */
     private class ChannelListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_CHANNEL  = new Color(109, 40, 217);
-        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
+        private static final long serialVersionUID = 1L;
+        private final Color COLOR_CHANNEL = new Color(109, 40, 217);
+        private final Color COLOR_BADGE_BG = new Color(220, 38, 38);
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
+                int index, boolean isSelected, boolean cellHasFocus) {
             if (!(value instanceof Channel)) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 return this;
@@ -391,7 +417,6 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
             return cell;
         }
     }
-
 
     /**
      * Ajoute un listener pour détecter la sélection d'un canal.

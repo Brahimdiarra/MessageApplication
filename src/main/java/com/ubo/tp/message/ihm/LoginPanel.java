@@ -15,6 +15,7 @@ import java.awt.event.ActionListener;
  * @author BRAHIM
  */
 public class LoginPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
 
     // --- Attributs ---
     /**
@@ -94,9 +95,9 @@ public class LoginPanel extends JPanel {
     }
 
     // Palette de couleurs (même que MessageAppMainView)
-    private static final Color COLOR_PRIMARY  = new Color(30, 58, 138);
-    private static final Color COLOR_ACCENT   = new Color(59, 130, 246);
-    private static final Color COLOR_BG       = new Color(248, 250, 252);
+    private static final Color COLOR_PRIMARY = new Color(30, 58, 138);
+    private static final Color COLOR_ACCENT = new Color(59, 130, 246);
+    private static final Color COLOR_BG = new Color(248, 250, 252);
 
     // ============================================
     // MÉTHODES D'INITIALISATION
@@ -216,8 +217,7 @@ public class LoginPanel extends JPanel {
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
-                BorderFactory.createEmptyBorder(0, 0, 20, 0)
-        ));
+                BorderFactory.createEmptyBorder(0, 0, 20, 0)));
 
         // ── En-tête coloré dans la carte ──────────────────────────────────────
         JPanel cardHeader = new JPanel(new BorderLayout());
@@ -231,43 +231,67 @@ public class LoginPanel extends JPanel {
         GridBagConstraints gbc = new GridBagConstraints();
 
         // Header dans la carte (ligne 0)
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0; gbc.insets = new Insets(0, 0, 16, 0);
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(0, 0, 16, 0);
         card.add(cardHeader, gbc);
 
         // ── Champs ────────────────────────────────────────────────────────────
-        gbc.gridwidth = 1; gbc.insets = new Insets(6, 16, 2, 8);
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(6, 16, 2, 8);
 
         // Tag label
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.EAST;
         card.add(labelTag, gbc);
 
         // Tag field
-        gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(6, 0, 2, 16);
         card.add(textFieldTag, gbc);
 
         // Password label
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.EAST; gbc.insets = new Insets(6, 16, 2, 8);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.insets = new Insets(6, 16, 2, 8);
         card.add(labelPassword, gbc);
 
         // Password field
-        gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(6, 0, 2, 16);
         card.add(passwordField, gbc);
 
         if (isSignupMode) {
             // Name label
-            gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
-            gbc.anchor = GridBagConstraints.EAST; gbc.insets = new Insets(6, 16, 2, 8);
+            gbc.gridx = 0;
+            gbc.gridy = 3;
+            gbc.weightx = 0;
+            gbc.fill = GridBagConstraints.NONE;
+            gbc.anchor = GridBagConstraints.EAST;
+            gbc.insets = new Insets(6, 16, 2, 8);
             card.add(labelName, gbc);
 
             // Name field
-            gbc.gridx = 1; gbc.weightx = 1.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.anchor = GridBagConstraints.WEST; gbc.insets = new Insets(6, 0, 2, 16);
+            gbc.gridx = 1;
+            gbc.weightx = 1.0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.WEST;
+            gbc.insets = new Insets(6, 0, 2, 16);
             card.add(textFieldName, gbc);
         }
 
@@ -278,7 +302,9 @@ public class LoginPanel extends JPanel {
         buttonPanel.add(buttonSubmit);
         buttonPanel.add(buttonToggleMode);
 
-        gbc.gridx = 0; gbc.gridy = buttonRow; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = buttonRow;
+        gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(20, 16, 0, 16);
         card.add(buttonPanel, gbc);
@@ -287,7 +313,8 @@ public class LoginPanel extends JPanel {
         GridBagConstraints outer = new GridBagConstraints();
         outer.anchor = GridBagConstraints.CENTER;
         outer.fill = GridBagConstraints.NONE;
-        outer.weightx = 1.0; outer.weighty = 1.0;
+        outer.weightx = 1.0;
+        outer.weighty = 1.0;
         this.add(card, outer);
 
         this.revalidate();

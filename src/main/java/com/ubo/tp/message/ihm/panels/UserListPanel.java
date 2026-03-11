@@ -17,11 +17,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Panel d'affichage de la liste des utilisateurs avec barre de recherche (USR-008).
+ * Panel d'affichage de la liste des utilisateurs avec barre de recherche
+ * (USR-008).
  *
  * @author BRAHIM
  */
 public class UserListPanel extends JPanel implements IDatabaseObserver {
+    private static final long serialVersionUID = 1L;
 
     private DefaultListModel<User> userListModel;
     private JList<User> userList;
@@ -65,9 +67,17 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
 
         // À chaque frappe, on refiltre la liste
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilter();
+            }
         });
 
         searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
@@ -94,10 +104,21 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         add(infoPanel, BorderLayout.SOUTH);
 
         userListModel.addListDataListener(new javax.swing.event.ListDataListener() {
-            public void intervalAdded(javax.swing.event.ListDataEvent e)   { updateCount(); }
-            public void intervalRemoved(javax.swing.event.ListDataEvent e) { updateCount(); }
-            public void contentsChanged(javax.swing.event.ListDataEvent e) { updateCount(); }
-            private void updateCount() { countLabel.setText(userListModel.getSize() + " utilisateur(s)"); }
+            public void intervalAdded(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
+            public void intervalRemoved(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
+            public void contentsChanged(javax.swing.event.ListDataEvent e) {
+                updateCount();
+            }
+
+            private void updateCount() {
+                countLabel.setText(userListModel.getSize() + " utilisateur(s)");
+            }
         });
     }
 
@@ -159,18 +180,22 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     public void notifyMessageAdded(Message m) {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
-            if (currentUser == null) return;
+            if (currentUser == null)
+                return;
 
             // Ignorer ses propres messages
-            if (m.getSender().getUuid().equals(currentUser.getUuid())) return;
+            if (m.getSender().getUuid().equals(currentUser.getUuid()))
+                return;
 
             // Ne compter que les DM adressés à l'utilisateur connecté
-            if (!m.getRecipient().equals(currentUser.getUuid())) return;
+            if (!m.getRecipient().equals(currentUser.getUuid()))
+                return;
 
             UUID senderUuid = m.getSender().getUuid();
 
             // Ne pas compter si la conversation avec cet expéditeur est déjà ouverte
-            if (senderUuid.equals(currentlyViewingUuid)) return;
+            if (senderUuid.equals(currentlyViewingUuid))
+                return;
 
             unreadCounts.merge(senderUuid, 1, Integer::sum);
             userList.repaint();
@@ -188,19 +213,34 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         userList.repaint();
     }
 
-    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
-    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
-    @Override public void notifyChannelAdded(Channel c)    { /* Non utilisé */ }
-    @Override public void notifyChannelDeleted(Channel c)  { /* Non utilisé */ }
-    @Override public void notifyChannelModified(Channel c) { /* Non utilisé */ }
+    @Override
+    public void notifyMessageDeleted(Message m) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyMessageModified(Message m) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyChannelAdded(Channel c) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyChannelDeleted(Channel c) {
+        /* Non utilisé */ }
+
+    @Override
+    public void notifyChannelModified(Channel c) {
+        /* Non utilisé */ }
 
     private class UserListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
-        private  final Color COLOR_TEXT     = new Color(30, 41, 59);
+        private static final long serialVersionUID = 1L;
+        private final Color COLOR_BADGE_BG = new Color(220, 38, 38);
+        private final Color COLOR_TEXT = new Color(30, 41, 59);
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
+                int index, boolean isSelected, boolean cellHasFocus) {
             if (!(value instanceof User)) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 return this;

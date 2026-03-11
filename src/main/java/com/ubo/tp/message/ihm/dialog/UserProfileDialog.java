@@ -14,13 +14,13 @@ import java.awt.*;
  * @author BRAHIM
  */
 public class UserProfileDialog extends JDialog {
-
+    private static final long serialVersionUID = 1L;
     // ── Palette de couleurs ───────────────────────────────────────────────
-    private static final Color COLOR_HEADER_BG  = new Color(30, 58, 138);   // bleu foncé
-    private static final Color COLOR_HEADER_FG  = Color.WHITE;
+    private static final Color COLOR_HEADER_BG = new Color(30, 58, 138); // bleu foncé
+    private static final Color COLOR_HEADER_FG = Color.WHITE;
     private static final Color COLOR_SECTION_BG = new Color(241, 245, 249); // gris très clair
-    private static final Color COLOR_ACCENT     = new Color(59, 130, 246);  // bleu vif
-    private static final Color COLOR_BORDER     = new Color(203, 213, 225); // gris bordure
+    private static final Color COLOR_ACCENT = new Color(59, 130, 246); // bleu vif
+    private static final Color COLOR_BORDER = new Color(203, 213, 225); // gris bordure
 
     private final DataManager dataManager;
     private final Runnable onLogout;
@@ -88,9 +88,12 @@ public class UserProfileDialog extends JDialog {
         igbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Tag (lecture seule)
-        igbc.gridx = 0; igbc.gridy = 0; igbc.weightx = 0.35;
+        igbc.gridx = 0;
+        igbc.gridy = 0;
+        igbc.weightx = 0.35;
         infoSection.add(makeLabel("Tag (@) :"), igbc);
-        igbc.gridx = 1; igbc.weightx = 0.65;
+        igbc.gridx = 1;
+        igbc.weightx = 0.65;
         JTextField tagField = new JTextField(user != null ? user.getUserTag() : "");
         tagField.setEditable(false);
         tagField.setBackground(COLOR_SECTION_BG);
@@ -100,9 +103,12 @@ public class UserProfileDialog extends JDialog {
         infoSection.add(tagField, igbc);
 
         // Nom
-        igbc.gridx = 0; igbc.gridy = 1; igbc.weightx = 0.35;
+        igbc.gridx = 0;
+        igbc.gridy = 1;
+        igbc.weightx = 0.35;
         infoSection.add(makeLabel("Nom :"), igbc);
-        igbc.gridx = 1; igbc.weightx = 0.65;
+        igbc.gridx = 1;
+        igbc.weightx = 0.65;
         nameField = new JTextField(user != null ? user.getName() : "");
         nameField.setBorder(BorderFactory.createLineBorder(COLOR_BORDER));
         infoSection.add(nameField, igbc);
@@ -117,33 +123,46 @@ public class UserProfileDialog extends JDialog {
         JLabel hint = new JLabel("Laisser vide pour conserver le mot de passe actuel");
         hint.setFont(hint.getFont().deriveFont(Font.ITALIC, 11f));
         hint.setForeground(Color.GRAY);
-        pgbc.gridx = 0; pgbc.gridy = 0; pgbc.gridwidth = 2;
+        pgbc.gridx = 0;
+        pgbc.gridy = 0;
+        pgbc.gridwidth = 2;
         pwdSection.add(hint, pgbc);
         pgbc.gridwidth = 1;
 
-        pgbc.gridx = 0; pgbc.gridy = 1; pgbc.weightx = 0.4;
+        pgbc.gridx = 0;
+        pgbc.gridy = 1;
+        pgbc.weightx = 0.4;
         pwdSection.add(makeLabel("Mot de passe actuel :"), pgbc);
-        pgbc.gridx = 1; pgbc.weightx = 0.6;
+        pgbc.gridx = 1;
+        pgbc.weightx = 0.6;
         currentPasswordField = new JPasswordField();
         currentPasswordField.setBorder(BorderFactory.createLineBorder(COLOR_BORDER));
         pwdSection.add(currentPasswordField, pgbc);
 
-        pgbc.gridx = 0; pgbc.gridy = 2; pgbc.weightx = 0.4;
+        pgbc.gridx = 0;
+        pgbc.gridy = 2;
+        pgbc.weightx = 0.4;
         pwdSection.add(makeLabel("Nouveau mot de passe :"), pgbc);
-        pgbc.gridx = 1; pgbc.weightx = 0.6;
+        pgbc.gridx = 1;
+        pgbc.weightx = 0.6;
         newPasswordField = new JPasswordField();
         newPasswordField.setBorder(BorderFactory.createLineBorder(COLOR_BORDER));
         pwdSection.add(newPasswordField, pgbc);
 
-        pgbc.gridx = 0; pgbc.gridy = 3; pgbc.weightx = 0.4;
+        pgbc.gridx = 0;
+        pgbc.gridy = 3;
+        pgbc.weightx = 0.4;
         pwdSection.add(makeLabel("Confirmer :"), pgbc);
-        pgbc.gridx = 1; pgbc.weightx = 0.6;
+        pgbc.gridx = 1;
+        pgbc.weightx = 0.6;
         confirmPasswordField = new JPasswordField();
         confirmPasswordField.setBorder(BorderFactory.createLineBorder(COLOR_BORDER));
         pwdSection.add(confirmPasswordField, pgbc);
 
         // Assemblage corps
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
         bodyPanel.add(infoSection, gbc);
         gbc.gridy = 1;
         bodyPanel.add(Box.createVerticalStrut(8), gbc);
@@ -205,14 +224,12 @@ public class UserProfileDialog extends JDialog {
         TitledBorder border = BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(COLOR_ACCENT, 1, true),
                 title,
-                TitledBorder.LEFT, TitledBorder.TOP
-        );
+                TitledBorder.LEFT, TitledBorder.TOP);
         border.setTitleColor(COLOR_ACCENT);
         border.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
         panel.setBorder(BorderFactory.createCompoundBorder(
                 border,
-                BorderFactory.createEmptyBorder(4, 4, 6, 4)
-        ));
+                BorderFactory.createEmptyBorder(4, 4, 6, 4)));
         return panel;
     }
 
@@ -245,18 +262,21 @@ public class UserProfileDialog extends JDialog {
 
         if (changingPassword) {
             if (!user.verifyPassword(currentPassword)) {
-                JOptionPane.showMessageDialog(this, "Mot de passe actuel incorrect.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Mot de passe actuel incorrect.", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
                 currentPasswordField.setText("");
                 currentPasswordField.requestFocus();
                 return;
             }
             if (newPassword.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Le nouveau mot de passe ne peut pas être vide.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Le nouveau mot de passe ne peut pas être vide.", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
                 newPasswordField.requestFocus();
                 return;
             }
             if (!newPassword.equals(confirmPassword)) {
-                JOptionPane.showMessageDialog(this, "Les mots de passe ne correspondent pas.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Les mots de passe ne correspondent pas.", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
                 confirmPasswordField.setText("");
                 confirmPasswordField.requestFocus();
                 return;
@@ -268,32 +288,36 @@ public class UserProfileDialog extends JDialog {
         dataManager.sendUser(user);
 
         System.out.println("[PROFIL] Profil mis à jour : @" + user.getUserTag() + " / " + newName);
-        JOptionPane.showMessageDialog(this, "Profil mis à jour avec succès !", "Succès", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Profil mis à jour avec succès !", "Succès",
+                JOptionPane.INFORMATION_MESSAGE);
         dispose();
     }
 
     private void deleteAccount() {
         User user = SessionManager.getInstance().getCurrentUser();
-        if (user == null) return;
+        if (user == null)
+            return;
 
         // Double confirmation
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Êtes-vous sûr de vouloir supprimer votre compte ?\n" +
-                "Cette action est irréversible.\n\n" +
-                "Compte : @" + user.getUserTag(),
+                        "Cette action est irréversible.\n\n" +
+                        "Compte : @" + user.getUserTag(),
                 "Supprimer mon compte",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
 
         // Vérification du mot de passe
         JPasswordField pwdField = new JPasswordField(20);
         int pwdResult = JOptionPane.showConfirmDialog(this,
-                new Object[]{"Confirmez votre mot de passe :", pwdField},
+                new Object[] { "Confirmez votre mot de passe :", pwdField },
                 "Confirmation de suppression",
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE);
-        if (pwdResult != JOptionPane.OK_OPTION) return;
+        if (pwdResult != JOptionPane.OK_OPTION)
+            return;
 
         String password = new String(pwdField.getPassword());
         if (!user.verifyPassword(password)) {

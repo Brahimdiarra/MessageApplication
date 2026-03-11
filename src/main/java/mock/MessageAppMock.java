@@ -1,4 +1,4 @@
-package mock;
+package main.java.mock;
 
 import java.awt.Button;
 import java.awt.Dimension;
