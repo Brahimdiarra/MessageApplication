@@ -314,7 +314,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
      * Renderer personnalisé pour les canaux.
      */
     private class ChannelListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_CHANNEL = new Color(109, 40, 217); // violet
+        private  final Color COLOR_CHANNEL = new Color(109, 40, 217);
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,

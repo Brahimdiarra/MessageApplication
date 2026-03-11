@@ -470,6 +470,24 @@ public class EntityManager implements IWatchableDirectoryObserver {
 	}
 
 	/**
+	 * Suppression du fichier correspondant à un utilisateur.
+	 * Le WatchableDirectory détectera la suppression et retirera l'utilisateur de la DB.
+	 *
+	 * @param user Utilisateur à supprimer
+	 */
+	public void deleteUserFile(User user) {
+		if (mDirectoryPath != null) {
+			String fileName = mDataFileManager.getFileName(user.getUuid(), Constants.USER_FILE_EXTENSION);
+			File userFile = new File(fileName);
+			if (userFile.exists()) {
+				userFile.delete();
+			}
+		} else {
+			throw new RuntimeException("Le répertoire d'échange n'est pas configuré !");
+		}
+	}
+
+	/**
 	 * Suppression du fichier correspondant à un canal.
 	 * Le WatchableDirectory détectera la suppression et retirera le canal de la DB.
 	 *

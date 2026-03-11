@@ -152,6 +152,19 @@ public class DataManager {
 	}
 
 	/**
+	 * Supprime un utilisateur.
+	 * Supprime le fichier sur le disque — le WatchableDirectory notifie la DB automatiquement.
+	 *
+	 * @param user Utilisateur à supprimer
+	 */
+	public void deleteUser(User user) {
+		this.mEntityManager.deleteUserFile(user);
+		if (mUserPersistenceManager != null) {
+			mUserPersistenceManager.deleteUser(user);
+		}
+	}
+
+	/**
 	 * Ecrit un Canal.
 	 *
 	 * @param channel

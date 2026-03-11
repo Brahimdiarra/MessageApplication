@@ -23,15 +23,17 @@ public class UserProfileDialog extends JDialog {
     private static final Color COLOR_BORDER     = new Color(203, 213, 225); // gris bordure
 
     private final DataManager dataManager;
+    private final Runnable onLogout;
 
     private JTextField nameField;
     private JPasswordField currentPasswordField;
     private JPasswordField newPasswordField;
     private JPasswordField confirmPasswordField;
 
-    public UserProfileDialog(Frame parent, DataManager dataManager) {
+    public UserProfileDialog(Frame parent, DataManager dataManager, Runnable onLogout) {
         super(parent, "Mon profil", true);
         this.dataManager = dataManager;
+        this.onLogout = onLogout;
         initComponents();
     }
 
@@ -151,9 +153,26 @@ public class UserProfileDialog extends JDialog {
         add(bodyPanel, BorderLayout.CENTER);
 
         // ── Boutons ───────────────────────────────────────────────────────
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        JPanel buttonPanel = new JPanel(new BorderLayout());
         buttonPanel.setBackground(COLOR_SECTION_BG);
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, COLOR_BORDER));
+
+        // Bouton suppression à gauche (danger)
+        JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        leftButtons.setOpaque(false);
+        JButton deleteButton = new JButton("🗑  Supprimer mon compte");
+        deleteButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        deleteButton.setBackground(new Color(220, 38, 38));
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setOpaque(true);
+        deleteButton.setBorderPainted(false);
+        deleteButton.setFocusPainted(false);
+        deleteButton.addActionListener(e -> deleteAccount());
+        leftButtons.add(deleteButton);
+
+        // Boutons annuler/enregistrer à droite
+        JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        rightButtons.setOpaque(false);
 
         JButton cancelButton = new JButton("Annuler");
         cancelButton.addActionListener(e -> dispose());
@@ -165,8 +184,11 @@ public class UserProfileDialog extends JDialog {
         saveButton.setBorderPainted(false);
         saveButton.addActionListener(e -> saveProfile());
 
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
+        rightButtons.add(cancelButton);
+        rightButtons.add(saveButton);
+
+        buttonPanel.add(leftButtons, BorderLayout.WEST);
+        buttonPanel.add(rightButtons, BorderLayout.EAST);
         add(buttonPanel, BorderLayout.SOUTH);
 
         getRootPane().setDefaultButton(saveButton);
@@ -250,7 +272,49 @@ public class UserProfileDialog extends JDialog {
         dispose();
     }
 
-    public static void showDialog(Frame parent, DataManager dataManager) {
-        new UserProfileDialog(parent, dataManager).setVisible(true);
+    private void deleteAccount() {
+        User user = SessionManager.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        // Double confirmation
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Êtes-vous sûr de vouloir supprimer votre compte ?\n" +
+                "Cette action est irréversible.\n\n" +
+                "Compte : @" + user.getUserTag(),
+                "Supprimer mon compte",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        // Vérification du mot de passe
+        JPasswordField pwdField = new JPasswordField(20);
+        int pwdResult = JOptionPane.showConfirmDialog(this,
+                new Object[]{"Confirmez votre mot de passe :", pwdField},
+                "Confirmation de suppression",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+        if (pwdResult != JOptionPane.OK_OPTION) return;
+
+        String password = new String(pwdField.getPassword());
+        if (!user.verifyPassword(password)) {
+            JOptionPane.showMessageDialog(this,
+                    "Mot de passe incorrect. Suppression annulée.",
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Suppression
+        System.out.println("[USR-010] Suppression du compte : @" + user.getUserTag());
+        dataManager.deleteUser(user);
+        SessionManager.getInstance().logout();
+
+        dispose();
+        if (onLogout != null) {
+            onLogout.run();
+        }
+    }
+
+    public static void showDialog(Frame parent, DataManager dataManager, Runnable onLogout) {
+        new UserProfileDialog(parent, dataManager, onLogout).setVisible(true);
     }
 }

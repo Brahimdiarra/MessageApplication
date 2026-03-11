@@ -322,7 +322,12 @@ public class MessageAppMainView extends JFrame {
                     "Erreur", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        UserProfileDialog.showDialog(this, messageApp.mDataManager);
+        UserProfileDialog.showDialog(this, messageApp.mDataManager, () -> {
+            setVisible(false);
+            if (authenticationView != null) {
+                authenticationView.displayWindow();
+            }
+        });
     }
 
     /**
