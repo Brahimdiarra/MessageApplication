@@ -84,7 +84,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         msgBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
         msgBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
         setBorder(msgBorder);
-        setBackground(MessageAppMainView.COLOR_PANEL_BG);
+        setBackground(MessageAppMainView.COLOR_BG);
 
         // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
@@ -131,14 +131,15 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         // Panel du bas : compteur + bouton supprimer
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setBackground(new Color(248, 250, 252));
-        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        bottomPanel.setBackground(new Color(47, 49, 54));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(32, 34, 37)));
 
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-        infoPanel.setOpaque(false);
+        infoPanel.setBackground(new Color(47, 49, 54));
+        infoPanel.setOpaque(true);
         countLabel = new JLabel("0 message(s)");
         countLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        countLabel.setForeground(Color.GRAY);
+        countLabel.setForeground(new Color(148, 155, 164));
         infoPanel.add(countLabel);
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
@@ -511,7 +512,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             removeAll();
             setLayout(new BorderLayout());
             setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            setBackground(isSelected ? new Color(219, 234, 254) : list.getBackground());
+            setBackground(isSelected ? new Color(64, 68, 75) : new Color(54, 57, 63));
 
             User currentUser = SessionManager.getInstance().getCurrentUser();
             boolean isMe = currentUser != null

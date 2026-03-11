@@ -16,18 +16,18 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
 /**
  * Panel de saisie et d'envoi de messages.
+ * Le destinataire est défini via setRecipient() depuis la sidebar.
  *
  * @author BRAHIM
  */
@@ -35,17 +35,26 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
 
     private JTextArea messageTextArea;
     private JButton sendButton;
-    private JComboBox<RecipientItem> recipientComboBox;
-    private DefaultComboBoxModel<RecipientItem> recipientModel;
     private DataManager dataManager;
     private JLabel charCountLabel;
     private JButton emojiPickerBtn;
     private JButton imageAttachBtn;
     private JLabel imagePreviewLabel;
-    private JButton imageClearBtn;
+    private TitledBorder sendBorder;
+
+    /** Destinataire courant (défini par clic dans la sidebar). */
+    private UUID currentRecipientUuid = null;
+    private String currentRecipientName = null;
+
+    /** Image en attente d'envoi (base64). */
     private String pendingImageData = null;
+
     private JPopupMenu autocompletePopup = new JPopupMenu();
     private int autocompleteColonPos = -1;
+
+    // ── Couleurs Discord-like ─────────────────────────────────────────────
+    private static final Color COLOR_INPUT_BG  = new Color(64, 68, 75);
+    private static final Color COLOR_INPUT_TEXT = new Color(220, 221, 222);
 
     /** Table de correspondance raccourci → emoji. */
     private static final Map<String, String> EMOJI_MAP = new LinkedHashMap<>();
@@ -69,7 +78,6 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         EMOJI_MAP.put(":100:",        "\uD83D\uDCAF");
         EMOJI_MAP.put(":rocket:",     "\uD83D\uDE80");
     }
-    /** Couleur de fond pour chaque emoji dans le sélecteur (compatible Java 8). */
     private static final Map<String, Color> EMOJI_COLORS = new LinkedHashMap<>();
     static {
         EMOJI_COLORS.put(":smile:",      new Color(255, 230, 100));
@@ -92,77 +100,77 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         EMOJI_COLORS.put(":rocket:",     new Color(147, 197, 253));
     }
 
-    /**
-     * Constructeur.
-     *
-     * @param dataManager Gestionnaire de données pour envoyer les messages
-     */
     public MessageSendPanel(DataManager dataManager) {
         this.dataManager = dataManager;
         initComponents();
-        loadRecipients();
     }
 
     /**
-     * Initialisation des composants.
+     * Définit le destinataire courant (appelé depuis la sidebar au clic sur user/canal).
+     *
+     * @param recipientUuid  UUID du destinataire
+     * @param displayName    Nom affiché (ex: "@alice" ou "#general")
      */
+    public void setRecipient(UUID recipientUuid, String displayName) {
+        this.currentRecipientUuid = recipientUuid;
+        this.currentRecipientName = displayName;
+        sendBorder.setTitle("Envoyer à " + displayName);
+        setEnabled(true);
+        messageTextArea.setEnabled(true);
+        messageTextArea.requestFocusInWindow();
+        repaint();
+    }
+
+    /** Réinitialise le destinataire (aucune conversation sélectionnée). */
+    public void clearRecipient() {
+        this.currentRecipientUuid = null;
+        this.currentRecipientName = null;
+        sendBorder.setTitle("Sélectionnez une conversation...");
+        repaint();
+    }
+
     private void initComponents() {
-        setLayout(new BorderLayout(5, 5));
-        TitledBorder sendBorder = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
-                "Envoyer un message", TitledBorder.LEFT, TitledBorder.TOP);
-        sendBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
-        sendBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
+        setLayout(new BorderLayout(0, 0));
+        setBackground(new Color(54, 57, 63));
+
+        sendBorder = BorderFactory.createTitledBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(32, 34, 37)),
+                "Sélectionnez une conversation...",
+                TitledBorder.LEFT, TitledBorder.TOP,
+                new Font("SansSerif", Font.BOLD, 12),
+                new Color(148, 155, 164));
         setBorder(sendBorder);
-        setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
-        // Panel du haut : sélection du destinataire
-        JPanel topPanel = new JPanel(new BorderLayout(5, 5));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        JLabel recipientLabel = new JLabel("À : ");
-        recipientModel = new DefaultComboBoxModel<>();
-        recipientComboBox = new JComboBox<>(recipientModel);
-        recipientComboBox.setRenderer(new RecipientCellRenderer());
-
-        topPanel.add(recipientLabel, BorderLayout.WEST);
-        topPanel.add(recipientComboBox, BorderLayout.CENTER);
-
-        // Panel central : zone de texte
+        // ── Zone de saisie ────────────────────────────────────────────────
         messageTextArea = new JTextArea(3, 40);
         messageTextArea.setLineWrap(true);
         messageTextArea.setWrapStyleWord(true);
-        messageTextArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        messageTextArea.setBackground(new Color(248, 250, 252));
-        messageTextArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        messageTextArea.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        messageTextArea.setBackground(COLOR_INPUT_BG);
+        messageTextArea.setForeground(COLOR_INPUT_TEXT);
+        messageTextArea.setCaretColor(Color.WHITE);
+        messageTextArea.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+
         JScrollPane scrollPane = new JScrollPane(messageTextArea);
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(4, 6, 4, 6),
-                BorderFactory.createLineBorder(new Color(203, 213, 225))
-        ));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        scrollPane.setBackground(new Color(54, 57, 63));
+        scrollPane.getViewport().setBackground(COLOR_INPUT_BG);
 
-        // Panel du bas : compteur de caractères
-        charCountLabel = new JLabel("0/200");
-        charCountLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        charCountLabel.setForeground(Color.GRAY);
-
-        // Panel de prévisualisation de l'image sélectionnée
+        // ── Panel de prévisualisation image ───────────────────────────────
         JPanel imagePreviewPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        imagePreviewPanel.setBackground(new Color(240, 245, 255));
-        imagePreviewPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        imagePreviewPanel.setBackground(new Color(47, 49, 54));
         imagePreviewPanel.setVisible(false);
 
         imagePreviewLabel = new JLabel();
-        imagePreviewLabel.setBorder(BorderFactory.createLineBorder(new Color(147, 197, 253), 1));
+        imagePreviewLabel.setBorder(BorderFactory.createLineBorder(new Color(88, 101, 242), 1));
         imagePreviewPanel.add(imagePreviewLabel);
 
-        imageClearBtn = new JButton("✕");
+        JButton imageClearBtn = new JButton("✕");
         imageClearBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
-        imageClearBtn.setForeground(new Color(220, 38, 38));
+        imageClearBtn.setForeground(new Color(237, 66, 69));
         imageClearBtn.setBorderPainted(false);
         imageClearBtn.setFocusPainted(false);
         imageClearBtn.setOpaque(false);
-        imageClearBtn.setToolTipText("Retirer l'image");
         imageClearBtn.addActionListener(e -> {
             pendingImageData = null;
             imagePreviewLabel.setIcon(null);
@@ -171,398 +179,185 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         });
         imagePreviewPanel.add(imageClearBtn);
 
-        // Panel du bas : bouton envoyer (bleu accent)
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
-        bottomPanel.setBackground(new Color(248, 250, 252));
-        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        // ── Barre de boutons en bas ───────────────────────────────────────
+        JPanel bottomBar = new JPanel(new BorderLayout(0, 0));
+        bottomBar.setBackground(new Color(54, 57, 63));
+        bottomBar.setBorder(BorderFactory.createEmptyBorder(0, 10, 8, 10));
 
-        imageAttachBtn = new JButton("\uD83D\uDDBC");
-        imageAttachBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
-        imageAttachBtn.setMargin(new java.awt.Insets(2, 4, 2, 4));
-        imageAttachBtn.setToolTipText("Joindre une image (PNG, JPG, GIF)");
-        imageAttachBtn.setBorderPainted(false);
-        imageAttachBtn.setFocusPainted(false);
+        JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        leftButtons.setOpaque(false);
+
+        imageAttachBtn = makeIconButton("\uD83D\uDDBC", "Joindre une image");
         imageAttachBtn.addActionListener(e -> attachImage(imagePreviewPanel));
-        bottomPanel.add(imageAttachBtn);
+        leftButtons.add(imageAttachBtn);
 
-        emojiPickerBtn = new JButton("\uD83D\uDE0A");
-        emojiPickerBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
-        emojiPickerBtn.setMargin(new java.awt.Insets(2, 4, 2, 4));
-        emojiPickerBtn.setToolTipText("Insérer un emoji (ou tapez :raccourci:)");
-        emojiPickerBtn.setBorderPainted(false);
-        emojiPickerBtn.setFocusPainted(false);
-        emojiPickerBtn.addActionListener(e2 -> showEmojiPicker());
-        bottomPanel.add(emojiPickerBtn);
-        bottomPanel.add(charCountLabel);
-        sendButton = new JButton("  Envoyer  ");
+        emojiPickerBtn = makeIconButton("\uD83D\uDE0A", "Insérer un emoji");
+        emojiPickerBtn.addActionListener(e -> showEmojiPicker());
+        leftButtons.add(emojiPickerBtn);
+
+        charCountLabel = new JLabel("0/200");
+        charCountLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        charCountLabel.setForeground(new Color(114, 118, 125));
+        leftButtons.add(charCountLabel);
+
+        sendButton = new JButton("Envoyer ▶");
         sendButton.setFont(new Font("SansSerif", Font.BOLD, 12));
-        sendButton.setBackground(MessageAppMainView.COLOR_ACCENT);
+        sendButton.setBackground(new Color(88, 101, 242));  // Discord blurple
         sendButton.setForeground(Color.WHITE);
         sendButton.setOpaque(true);
         sendButton.setBorderPainted(false);
         sendButton.setFocusPainted(false);
-        sendButton.setPreferredSize(new Dimension(110, 30));
-        sendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
-            }
-        });
-        bottomPanel.add(sendButton);
+        sendButton.setPreferredSize(new Dimension(120, 32));
+        sendButton.addActionListener(e -> sendMessage());
 
-        // Panel central regroupant zone de texte + prévisualisation image
+        bottomBar.add(leftButtons, BorderLayout.WEST);
+        bottomBar.add(sendButton, BorderLayout.EAST);
+
+        // ── Assemblage ────────────────────────────────────────────────────
         JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
         centerPanel.add(imagePreviewPanel, BorderLayout.SOUTH);
 
-        // Ajout des panels
-        add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(bottomBar, BorderLayout.SOUTH);
 
-        // Raccourci clavier : Ctrl+Enter pour envoyer
+        // Ctrl+Enter pour envoyer
         messageTextArea.getInputMap().put(KeyStroke.getKeyStroke("control ENTER"), "send");
         messageTextArea.getActionMap().put("send", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
-            }
+            @Override public void actionPerformed(ActionEvent e) { sendMessage(); }
         });
 
-        // Listener pour mettre à jour le compteur à chaque frappe
+        // Compteur de caractères
         messageTextArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                updateCharCount();
-                SwingUtilities.invokeLater(MessageSendPanel.this::checkAutocomplete);
-            }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                updateCharCount();
-                SwingUtilities.invokeLater(MessageSendPanel.this::hideAutocomplete);
-            }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCharCount(); }
-
-            private void updateCharCount() {
-                int count = messageTextArea.getText().length();
-                charCountLabel.setText(count + "/200");
-                // Rouge si on dépasse ou approche la limite, gris sinon
-                if (count > 200) {
-                    charCountLabel.setForeground(Color.RED);
-                } else if (count > 180) {
-                    charCountLabel.setForeground(new Color(255, 140, 0)); // Orange
-                } else {
-                    charCountLabel.setForeground(Color.GRAY);
-                }
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { updateCount(); checkAutocomplete(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { updateCount(); hideAutocomplete(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCount(); }
+            private void updateCount() {
+                int n = messageTextArea.getText().length();
+                charCountLabel.setText(n + "/200");
+                charCountLabel.setForeground(n > 200 ? new Color(237, 66, 69) :
+                        n > 180 ? new Color(255, 160, 0) : new Color(114, 118, 125));
             }
         });
     }
 
-    /**
-     * Charge la liste des destinataires (utilisateurs et canaux).
-     */
-    public void loadRecipients() {
-        recipientModel.removeAllElements();
-
-        // Ajouter un placeholder
-        recipientModel.addElement(new RecipientItem(null, null, "-- Sélectionner un destinataire --"));
-
-        // Ajouter les utilisateurs
-        Set<User> users = dataManager.getUsers();
-        User currentUser = SessionManager.getInstance().getCurrentUser();
-
-        for (User user : users) {
-            // Ne pas ajouter l'utilisateur connecté dans la liste
-            if (currentUser != null && !user.getUuid().equals(currentUser.getUuid())) {
-                recipientModel.addElement(new RecipientItem(user, null, null));
-            }
-        }
-
-        // Ajouter les canaux
-        Set<Channel> channels = dataManager.getChannels();
-        for (Channel channel : channels) {
-            recipientModel.addElement(new RecipientItem(null, channel, null));
-        }
+    private JButton makeIconButton(String icon, String tooltip) {
+        JButton btn = new JButton(icon);
+        btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+        btn.setMargin(new Insets(2, 6, 2, 6));
+        btn.setToolTipText(tooltip);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setForeground(new Color(148, 155, 164));
+        return btn;
     }
 
-    /**
-     * Ouvre un sélecteur de fichier image, encode en base64 et affiche la prévisualisation.
-     */
+    // ── Logique d'envoi ──────────────────────────────────────────────────
+
     private void attachImage(JPanel imagePreviewPanel) {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Choisir une image");
         chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                 "Images (PNG, JPG, GIF)", "png", "jpg", "jpeg", "gif"));
         chooser.setAcceptAllFileFilterUsed(false);
-
         if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
-
-        File file = chooser.getSelectedFile();
         try {
+            File file = chooser.getSelectedFile();
             BufferedImage original = ImageIO.read(file);
-            if (original == null) {
-                JOptionPane.showMessageDialog(this, "Impossible de lire l'image.", "Erreur", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Redimensionner à 300px de large max pour limiter la taille du fichier
-            int targetW = Math.min(original.getWidth(), 300);
-            int targetH = (int) ((double) original.getHeight() * targetW / original.getWidth());
-            BufferedImage scaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
-            scaled.getGraphics().drawImage(original.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH), 0, 0, null);
-
-            // Encoder en base64
+            if (original == null) { showErr("Impossible de lire l'image."); return; }
+            int tw = Math.min(original.getWidth(), 300);
+            int th = (int) ((double) original.getHeight() * tw / original.getWidth());
+            BufferedImage scaled = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
+            scaled.getGraphics().drawImage(original.getScaledInstance(tw, th, Image.SCALE_SMOOTH), 0, 0, null);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(scaled, "png", baos);
             pendingImageData = Base64.getEncoder().encodeToString(baos.toByteArray());
-
-            // Afficher la prévisualisation (80px de haut)
-            int prevH = 80;
-            int prevW = (int) ((double) targetW * prevH / targetH);
-            ImageIcon icon = new ImageIcon(scaled.getScaledInstance(prevW, prevH, Image.SCALE_SMOOTH));
-            imagePreviewLabel.setIcon(icon);
+            int ph = 80, pw = (int) ((double) tw * ph / th);
+            imagePreviewLabel.setIcon(new ImageIcon(scaled.getScaledInstance(pw, ph, Image.SCALE_SMOOTH)));
             imagePreviewPanel.setVisible(true);
             revalidate();
-
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erreur lors du chargement de l'image : " + ex.getMessage(),
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            showErr("Erreur image : " + ex.getMessage());
         }
     }
 
-    /**
-     * Envoie le message au destinataire sélectionné.
-     */
     private void sendMessage() {
-        // Récupérer le texte du message
-        String messageText = messageTextArea.getText().trim();
-
-        // Remplacer les raccourcis :emoji: par le vrai emoji
-        messageText = applyEmojiShortcuts(messageText);
-
-        // Un message doit avoir du texte ou une image
-        if (messageText.isEmpty() && pendingImageData == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Le message ne peut pas être vide !",
-                    "Erreur",
-                    JOptionPane.WARNING_MESSAGE);
+        if (currentRecipientUuid == null) {
+            showErr("Sélectionnez d'abord un utilisateur ou un canal dans la liste de gauche.");
             return;
         }
-
-        // Vérification de la limite de 200 caractères (MSG-008) uniquement pour le texte
-        if (messageText.length() > 200) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Le message ne peut pas dépasser 200 caractères ! (" + messageText.length() + "/200)",
-                    "Erreur",
-                    JOptionPane.WARNING_MESSAGE);
+        String text = applyEmojiShortcuts(messageTextArea.getText().trim());
+        if (text.isEmpty() && pendingImageData == null) {
+            showErr("Le message ne peut pas être vide !");
             return;
         }
-
-        // Récupérer le destinataire sélectionné
-        RecipientItem selectedItem = (RecipientItem) recipientComboBox.getSelectedItem();
-
-        if (selectedItem == null || (selectedItem.user == null && selectedItem.channel == null)) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Veuillez sélectionner un destinataire !",
-                    "Erreur",
-                    JOptionPane.WARNING_MESSAGE);
+        if (text.length() > 200) {
+            showErr("Le message ne peut pas dépasser 200 caractères ! (" + text.length() + "/200)");
             return;
         }
-
-        // Récupérer l'utilisateur connecté
         User currentUser = SessionManager.getInstance().getCurrentUser();
-        if (currentUser == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Erreur : aucun utilisateur connecté !",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Déterminer l'UUID du destinataire
-        UUID recipientUuid;
-        String recipientName;
-
-        if (selectedItem.user != null) {
-            recipientUuid = selectedItem.user.getUuid();
-            recipientName = "@" + selectedItem.user.getUserTag();
-        } else {
-            recipientUuid = selectedItem.channel.getUuid();
-            recipientName = "#" + selectedItem.channel.getName();
-        }
-
+        if (currentUser == null) { showErr("Aucun utilisateur connecté !"); return; }
         try {
-            // Créer le message (avec image si présente)
-            Message message = new Message(currentUser, recipientUuid, messageText, pendingImageData);
-
-            // Envoyer via le DataManager
-            dataManager.sendMessage(message);
-
-            System.out.println("[SEND] Message envoyé à " + recipientName + " : " + messageText
-                    + (pendingImageData != null ? " [+ image]" : ""));
-
-            // Effacer le champ de texte et l'image
+            dataManager.sendMessage(new Message(currentUser, currentRecipientUuid, text, pendingImageData));
             messageTextArea.setText("");
             pendingImageData = null;
             imagePreviewLabel.setIcon(null);
-            // Cacher le panel de prévisualisation (on retrouve le parent via le composant)
             Container parent = imagePreviewLabel.getParent();
             if (parent != null) parent.setVisible(false);
             revalidate();
-
-            // Message de confirmation
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Message envoyé à " + recipientName + " !",
-                    "Succès",
-                    JOptionPane.INFORMATION_MESSAGE);
-
         } catch (Exception e) {
-            System.err.println("[ERREUR] Échec de l'envoi du message : " + e.getMessage());
-            e.printStackTrace();
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Erreur lors de l'envoi du message : " + e.getMessage(),
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
+            showErr("Erreur d'envoi : " + e.getMessage());
         }
     }
 
-    /**
-     * Classe interne représentant un élément de la liste des destinataires.
-     */
-    private static class RecipientItem {
-        User user;
-        Channel channel;
-        String placeholder;
-
-        public RecipientItem(User user, Channel channel, String placeholder) {
-            this.user = user;
-            this.channel = channel;
-            this.placeholder = placeholder;
-        }
-
-        @Override
-        public String toString() {
-            if (placeholder != null) {
-                return placeholder;
-            }
-            if (user != null) {
-                return "👤 @" + user.getUserTag() + " (" + user.getName() + ")";
-            }
-            if (channel != null) {
-                return "# " + channel.getName();
-            }
-            return "";
-        }
+    private void showErr(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Erreur", JOptionPane.WARNING_MESSAGE);
     }
 
-    // ── IDatabaseObserver : rafraîchit la liste des destinataires à chaque changement ──
+    // ── IDatabaseObserver ────────────────────────────────────────────────
+    @Override public void notifyUserAdded(User u)       { /* plus de liste destinataire */ }
+    @Override public void notifyUserDeleted(User u)     { }
+    @Override public void notifyUserModified(User u)    { }
+    @Override public void notifyMessageAdded(Message m)    { }
+    @Override public void notifyMessageDeleted(Message m)  { }
+    @Override public void notifyMessageModified(Message m) { }
+    @Override public void notifyChannelAdded(Channel c)    { }
+    @Override public void notifyChannelDeleted(Channel c)  { }
+    @Override public void notifyChannelModified(Channel c) { }
 
-    @Override
-    public void notifyChannelAdded(Channel addedChannel) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
+    // ── Emoji autocomplete ───────────────────────────────────────────────
 
-    @Override
-    public void notifyChannelDeleted(Channel deletedChannel) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
-
-    @Override
-    public void notifyChannelModified(Channel modifiedChannel) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
-
-    @Override
-    public void notifyUserAdded(User addedUser) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
-
-    @Override
-    public void notifyUserDeleted(User deletedUser) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
-
-    @Override
-    public void notifyUserModified(User modifiedUser) {
-        SwingUtilities.invokeLater(this::loadRecipients);
-    }
-
-    @Override public void notifyMessageAdded(Message m)    { /* Non utilisé */ }
-    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
-    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
-
-    /**
-     * Renderer personnalisé pour la liste déroulante des destinataires.
-     */
-    private class RecipientCellRenderer extends DefaultListCellRenderer {
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value,
-                int index, boolean isSelected, boolean cellHasFocus) {
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-            if (value instanceof RecipientItem) {
-                RecipientItem item = (RecipientItem) value;
-
-                if (item.placeholder != null) {
-                    setForeground(Color.GRAY);
-                    setFont(getFont().deriveFont(Font.ITALIC));
-                } else {
-                    if (item.user != null) {
-                        setForeground(new Color(0, 102, 204)); // Bleu pour users
-                    } else if (item.channel != null) {
-                        setForeground(new Color(34, 139, 34)); // Vert pour channels
-                    }
-                }
-            }
-
-            return this;
-        }
-    }
-
-    // ── Emoji autocomplete ───────────────────────────────────────────────────
-
-    /** Remplace tous les raccourcis :shortcut: par leur emoji correspondant. */
     private String applyEmojiShortcuts(String text) {
-        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
-            text = text.replace(entry.getKey(), entry.getValue());
-        }
+        for (Map.Entry<String, String> e : EMOJI_MAP.entrySet())
+            text = text.replace(e.getKey(), e.getValue());
         return text;
     }
 
-    /** Vérifie le texte courant et affiche le popup d'autocomplétion si pertinent. */
     private void checkAutocomplete() {
-        String text = messageTextArea.getText();
-        int caretPos = messageTextArea.getCaretPosition();
-        if (caretPos == 0) { hideAutocomplete(); return; }
-
-        // Trouver le ":" le plus récent avant le caret
-        int colonPos = -1;
-        for (int i = caretPos - 1; i >= 0; i--) {
-            char ch = text.charAt(i);
-            if (ch == ':'  ) { colonPos = i; break; }
-            if (ch == ' ' || ch == '\n') break;
-        }
-        if (colonPos < 0) { hideAutocomplete(); return; }
-
-        String partial = text.substring(colonPos, caretPos); // ex: ":sm"
-        // On n'affiche pas si le raccourci est déjà fermé
-        if (partial.length() > 1 && partial.endsWith(":")) { hideAutocomplete(); return; }
-
-        List<String> matches = EMOJI_MAP.keySet().stream()
-                .filter(k -> k.startsWith(partial) && !k.equals(partial))
-                .collect(Collectors.toList());
-        if (matches.isEmpty()) { hideAutocomplete(); return; }
-
-        autocompleteColonPos = colonPos;
-        showAutocompletePopup(matches);
+        SwingUtilities.invokeLater(() -> {
+            String text = messageTextArea.getText();
+            int caret = messageTextArea.getCaretPosition();
+            if (caret == 0) { hideAutocomplete(); return; }
+            int colonPos = -1;
+            for (int i = caret - 1; i >= 0; i--) {
+                char ch = text.charAt(i);
+                if (ch == ':') { colonPos = i; break; }
+                if (ch == ' ' || ch == '\n') break;
+            }
+            if (colonPos < 0) { hideAutocomplete(); return; }
+            String partial = text.substring(colonPos, caret);
+            if (partial.length() > 1 && partial.endsWith(":")) { hideAutocomplete(); return; }
+            List<String> matches = EMOJI_MAP.keySet().stream()
+                    .filter(k -> k.startsWith(partial) && !k.equals(partial))
+                    .collect(Collectors.toList());
+            if (matches.isEmpty()) { hideAutocomplete(); return; }
+            autocompleteColonPos = colonPos;
+            showAutocompletePopup(matches);
+        });
     }
 
-    /** Affiche le popup d'autocomplétion avec les raccourcis correspondants. */
     private void showAutocompletePopup(List<String> matches) {
         autocompletePopup.removeAll();
         for (String shortcut : matches) {
@@ -572,8 +367,8 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
             final int pos = autocompleteColonPos;
             item.addActionListener(ae -> SwingUtilities.invokeLater(() -> {
                 try {
-                    int caret = messageTextArea.getCaretPosition();
-                    messageTextArea.getDocument().remove(pos, caret - pos);
+                    int c = messageTextArea.getCaretPosition();
+                    messageTextArea.getDocument().remove(pos, c - pos);
                     messageTextArea.getDocument().insertString(pos, emoji, null);
                 } catch (Exception ex) { /* ignore */ }
             }));
@@ -581,29 +376,26 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         }
         try {
             java.awt.Rectangle r = messageTextArea.modelToView(autocompleteColonPos);
-            if (r != null) autocompletePopup.show(messageTextArea, r.x, r.y - autocompletePopup.getPreferredSize().height - 4);
+            if (r != null)
+                autocompletePopup.show(messageTextArea, r.x, r.y - autocompletePopup.getPreferredSize().height - 4);
         } catch (Exception ex) { /* ignore */ }
     }
 
-    /** Cache le popup d'autocomplétion. */
     private void hideAutocomplete() {
         if (autocompletePopup.isVisible()) autocompletePopup.setVisible(false);
     }
 
-    /** Affiche un sélecteur d'emoji visuel (grille). */
     private void showEmojiPicker() {
         JPopupMenu picker = new JPopupMenu();
         JPanel grid = new JPanel(new java.awt.GridLayout(0, 4, 3, 3));
         grid.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        grid.setBackground(new Color(248, 250, 252));
+        grid.setBackground(new Color(47, 49, 54));
         for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
-            Color bg = EMOJI_COLORS.getOrDefault(entry.getKey(), new Color(220, 220, 220));
-            // JLabel respecte setBackground sous Nimbus, contrairement à JButton
+            Color bg = EMOJI_COLORS.getOrDefault(entry.getKey(), new Color(80, 80, 80));
             JLabel lbl = new JLabel(entry.getValue(), JLabel.CENTER);
             lbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
             lbl.setToolTipText(entry.getKey());
-            lbl.setBackground(bg);
-            lbl.setOpaque(true);
+            lbl.setBackground(bg); lbl.setOpaque(true);
             lbl.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(bg.darker(), 1, true),
                     BorderFactory.createEmptyBorder(4, 6, 4, 6)));

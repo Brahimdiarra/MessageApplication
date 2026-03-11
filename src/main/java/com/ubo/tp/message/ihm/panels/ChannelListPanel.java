@@ -32,106 +32,84 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     private JLabel countLabel;
     private JTextField searchField;
 
-    /** Liste complète de tous les canaux (avant filtre de recherche). */
     private final List<Channel> allChannels = new ArrayList<>();
-
-    /** Compteurs de messages non lus par UUID de canal (CHN-009). */
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
-
-    /** UUID du canal actuellement affiché (pour ne pas compter ses nouveaux messages). */
     private UUID currentlyViewingUuid = null;
 
-    /**
-     * Constructeur.
-     */
+    // ── Dark mode ─────────────────────────────────────────────────────────
+    private boolean darkMode = false;
+
+    private static final Color DARK_BG        = new Color(47, 49, 54);
+    private static final Color DARK_BG_ALT    = new Color(54, 57, 63);
+    private static final Color DARK_SEL       = new Color(88, 101, 242);
+    private static final Color DARK_TEXT      = new Color(148, 155, 164);
+    private static final Color DARK_TEXT_ACT  = new Color(220, 221, 222);
+    private static final Color DARK_BADGE     = new Color(237, 66, 69);
+    private static final Color DARK_CHANNEL   = new Color(149, 128, 255);
+
     public ChannelListPanel() {
         initComponents();
     }
 
-    //  setter
     public void setDataManager(DataManager dataManager) {
         this.dataManager = dataManager;
     }
 
-    /**
-     * Ouvre le dialogue de création de canal.
-     */
+    /** Active le rendu sombre style Discord. */
+    public void setDarkMode(boolean dark) {
+        this.darkMode = dark;
+        if (dark) {
+            setBackground(DARK_BG);
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            channelList.setBackground(DARK_BG);
+            channelList.setForeground(DARK_TEXT_ACT);
+            channelList.setSelectionBackground(DARK_SEL);
+            channelList.setSelectionForeground(Color.WHITE);
+        }
+        repaint();
+    }
+
     private void createNewChannel() {
         if (dataManager == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Erreur : DataManager non initialisé",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            JOptionPane.showMessageDialog(this, "Erreur : DataManager non initialisé", "Erreur", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
-        // Récupérer la fenêtre parente
         Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-
-        // Afficher le dialogue
         ChannelCreationDialog.showDialog(parentFrame, dataManager);
     }
 
-    /**
-     * Ouvre le dialogue de modification du canal sélectionné.
-     */
     private void editSelectedChannel() {
         Channel selected = getSelectedChannel();
-
         if (selected == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Sélectionnez un canal à modifier.",
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Sélectionnez un canal à modifier.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-
         if (dataManager == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Erreur : DataManager non initialisé",
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erreur : DataManager non initialisé", "Erreur", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
         Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         ChannelEditDialog.showDialog(parentFrame, selected, dataManager);
     }
 
-    /**
-     * Supprime le canal sélectionné (uniquement si l'utilisateur connecté en est le créateur).
-     */
     private void deleteSelectedChannel() {
         Channel selected = getSelectedChannel();
-
         if (selected == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Sélectionnez un canal à supprimer.",
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Sélectionnez un canal à supprimer.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-
         User currentUser = SessionManager.getInstance().getCurrentUser();
         if (currentUser == null || !selected.getCreator().getUuid().equals(currentUser.getUuid())) {
-            JOptionPane.showMessageDialog(this,
-                    "Seul le créateur du canal peut le supprimer.",
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seul le créateur du canal peut le supprimer.", "Erreur", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Supprimer le canal \"" + selected.getName() + "\" ?",
-                "Confirmation", JOptionPane.YES_NO_OPTION);
-
+                "Supprimer le canal \"" + selected.getName() + "\" ?", "Confirmation", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             dataManager.deleteChannel(selected);
-            System.out.println("[CHANNEL] Canal supprimé : " + selected.getName());
         }
     }
 
-    /**
-     * Initialisation des composants.
-     */
     private void initComponents() {
         setLayout(new BorderLayout());
         TitledBorder channelBorder = BorderFactory.createTitledBorder(
@@ -142,7 +120,6 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         setBorder(channelBorder);
         setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
-        // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
         searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
         searchField = new JTextField();
@@ -160,18 +137,14 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         channelList = new JList<>(channelListModel);
         channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         channelList.setCellRenderer(new ChannelListCellRenderer());
-        channelList.setFixedCellHeight(36);
+        channelList.setFixedCellHeight(40);
         channelList.setBackground(Color.WHITE);
+        add(new JScrollPane(channelList), BorderLayout.CENTER);
 
-        JScrollPane scrollPane = new JScrollPane(channelList);
-        add(scrollPane, BorderLayout.CENTER);
-
-        // Panel du bas
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(new Color(248, 250, 252));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
 
-        // Compteur
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         infoPanel.setOpaque(false);
         countLabel = new JLabel("0 canal(aux)");
@@ -179,91 +152,55 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         countLabel.setForeground(Color.GRAY);
         infoPanel.add(countLabel);
 
-        // Boutons colorés
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 3));
         buttonsPanel.setOpaque(false);
 
-        JButton newChannelButton = new JButton("+");
-        newChannelButton.setToolTipText("Créer un nouveau canal");
-        newChannelButton.setPreferredSize(new Dimension(30, 24));
-        newChannelButton.setBackground(new Color(22, 163, 74));  // vert
-        newChannelButton.setForeground(Color.WHITE);
-        newChannelButton.setOpaque(true);
-        newChannelButton.setBorderPainted(false);
-        newChannelButton.setFocusPainted(false);
-        newChannelButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        newChannelButton.addActionListener(e -> createNewChannel());
-
-        JButton editChannelButton = new JButton("✏");
-        editChannelButton.setToolTipText("Modifier le canal sélectionné");
-        editChannelButton.setPreferredSize(new Dimension(30, 24));
-        editChannelButton.setBackground(MessageAppMainView.COLOR_ACCENT);  // bleu
-        editChannelButton.setForeground(Color.WHITE);
-        editChannelButton.setOpaque(true);
-        editChannelButton.setBorderPainted(false);
-        editChannelButton.setFocusPainted(false);
-        editChannelButton.addActionListener(e -> editSelectedChannel());
-
-        JButton deleteChannelButton = new JButton("🗑");
-        deleteChannelButton.setToolTipText("Supprimer un canal");
-        deleteChannelButton.setPreferredSize(new Dimension(30, 24));
-        deleteChannelButton.setBackground(new Color(220, 38, 38));  // rouge
-        deleteChannelButton.setForeground(Color.WHITE);
-        deleteChannelButton.setOpaque(true);
-        deleteChannelButton.setBorderPainted(false);
-        deleteChannelButton.setFocusPainted(false);
-        deleteChannelButton.addActionListener(e -> deleteSelectedChannel());
-
-        buttonsPanel.add(newChannelButton);
-        buttonsPanel.add(editChannelButton);
-        buttonsPanel.add(deleteChannelButton);
+        buttonsPanel.add(makeBtn("+", "Créer un nouveau canal", new Color(22, 163, 74), () -> createNewChannel()));
+        buttonsPanel.add(makeBtn("✏", "Modifier le canal sélectionné", MessageAppMainView.COLOR_ACCENT, () -> editSelectedChannel()));
+        buttonsPanel.add(makeBtn("🗑", "Supprimer un canal", new Color(220, 38, 38), () -> deleteSelectedChannel()));
 
         bottomPanel.add(infoPanel, BorderLayout.WEST);
         bottomPanel.add(buttonsPanel, BorderLayout.EAST);
-
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Mise à jour du compteur
         channelListModel.addListDataListener(new javax.swing.event.ListDataListener() {
-            public void intervalAdded(javax.swing.event.ListDataEvent e) { updateCount(); }
+            public void intervalAdded(javax.swing.event.ListDataEvent e)   { updateCount(); }
             public void intervalRemoved(javax.swing.event.ListDataEvent e) { updateCount(); }
             public void contentsChanged(javax.swing.event.ListDataEvent e) { updateCount(); }
-            private void updateCount() {
-                countLabel.setText(channelListModel.getSize() + " canal(aux)");
-            }
+            private void updateCount() { countLabel.setText(channelListModel.getSize() + " canal(aux)"); }
         });
     }
 
-    /**
-     * Refiltre la liste affichée selon le texte dans le champ de recherche.
-     * On cherche dans le nom du canal (insensible à la casse).
-     */
+    private JButton makeBtn(String label, String tooltip, Color bg, Runnable action) {
+        JButton btn = new JButton(label);
+        btn.setToolTipText(tooltip);
+        btn.setPreferredSize(new Dimension(30, 24));
+        btn.setBackground(bg);
+        btn.setForeground(Color.WHITE);
+        btn.setOpaque(true);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btn.addActionListener(e -> action.run());
+        return btn;
+    }
+
     private void applyFilter() {
         String query = searchField.getText().trim().toLowerCase();
         channelListModel.clear();
         for (Channel c : allChannels) {
-            if (query.isEmpty() || c.getName().toLowerCase().contains(query)) {
+            if (query.isEmpty() || c.getName().toLowerCase().contains(query))
                 channelListModel.addElement(c);
-            }
         }
     }
 
-    /**
-     * Retourne le canal sélectionné.
-     *
-     * @return Le canal sélectionné ou null
-     */
-    public Channel getSelectedChannel() {
-        return channelList.getSelectedValue();
-    }
+    public Channel getSelectedChannel() { return channelList.getSelectedValue(); }
 
     @Override
     public void notifyChannelAdded(Channel addedChannel) {
         SwingUtilities.invokeLater(() -> {
             boolean exists = allChannels.stream().anyMatch(c -> c.getUuid().equals(addedChannel.getUuid()));
-            if (!exists) {
-                allChannels.add(addedChannel);
-            }
+            if (!exists) allChannels.add(addedChannel);
             applyFilter();
         });
     }
@@ -294,111 +231,90 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
             if (currentUser == null) return;
-
-            // Ignorer ses propres messages
             if (addedMessage.getSender().getUuid().equals(currentUser.getUuid())) return;
-
             UUID recipient = addedMessage.getRecipient();
-
-            // Vérifier si le destinataire est un canal connu
-            boolean isChannelMessage = allChannels.stream()
-                    .anyMatch(c -> c.getUuid().equals(recipient));
-            if (!isChannelMessage) return;
-
-            // Ne pas compter si ce canal est actuellement affiché
-            if (recipient.equals(currentlyViewingUuid)) return;
-
+            boolean isChannel = allChannels.stream().anyMatch(c -> c.getUuid().equals(recipient));
+            if (!isChannel || recipient.equals(currentlyViewingUuid)) return;
             unreadCounts.merge(recipient, 1, Integer::sum);
             channelList.repaint();
         });
     }
 
-    /**
-     * Marque tous les messages d'un canal comme lus (CHN-009).
-     *
-     * @param channelUuid UUID du canal sélectionné
-     */
     public void markAsRead(UUID channelUuid) {
         currentlyViewingUuid = channelUuid;
         unreadCounts.remove(channelUuid);
         channelList.repaint();
     }
 
-    @Override
-    public void notifyMessageDeleted(Message deletedMessage) {
-        // Non utilisé
-    }
+    @Override public void notifyMessageDeleted(Message m)  { }
+    @Override public void notifyMessageModified(Message m) { }
+    @Override public void notifyUserAdded(User u)          { }
+    @Override public void notifyUserDeleted(User u)        { }
+    @Override public void notifyUserModified(User u)       { }
 
-    @Override
-    public void notifyMessageModified(Message modifiedMessage) {
-        // Non utilisé
-    }
+    public void clearSelection() { channelList.clearSelection(); }
 
-    @Override
-    public void notifyUserAdded(User addedUser) {
-        // Non utilisé
-    }
-
-    @Override
-    public void notifyUserDeleted(User deletedUser) {
-        // Non utilisé
-    }
-
-    @Override
-    public void notifyUserModified(User modifiedUser) {
-        // Non utilisé
-    }
-
-    /**
-     * Renderer personnalisé pour les canaux.
-     */
-    private class ChannelListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_CHANNEL  = new Color(109, 40, 217);
-        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
-
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
-            if (!(value instanceof Channel)) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                return this;
-            }
-            Channel channel = (Channel) value;
-            int unread = unreadCounts.getOrDefault(channel.getUuid(), 0);
-
-            JPanel cell = new JPanel(new BorderLayout(4, 0));
-            cell.setOpaque(true);
-            cell.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-            cell.setBackground(isSelected ? list.getSelectionBackground()
-                    : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
-
-            JLabel nameLabel = new JLabel("  #  " + channel.getName());
-            nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
-            nameLabel.setForeground(isSelected ? list.getSelectionForeground() : COLOR_CHANNEL);
-            nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
-            cell.add(nameLabel, BorderLayout.CENTER);
-
-            if (unread > 0) {
-                JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
-                badge.setFont(new Font("SansSerif", Font.BOLD, 10));
-                badge.setForeground(Color.WHITE);
-                badge.setBackground(COLOR_BADGE_BG);
-                badge.setOpaque(true);
-                badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
-                cell.add(badge, BorderLayout.EAST);
-            }
-
-            return cell;
-        }
-    }
-
-
-    /**
-     * Ajoute un listener pour détecter la sélection d'un canal.
-     *
-     * @param listener Le listener à ajouter
-     */
     public void addSelectionListener(javax.swing.event.ListSelectionListener listener) {
         channelList.addListSelectionListener(listener);
+    }
+
+    // ── Renderer ──────────────────────────────────────────────────────────
+
+    private class ChannelListCellRenderer implements ListCellRenderer<Channel> {
+        @Override
+        public Component getListCellRendererComponent(JList<? extends Channel> list, Channel channel,
+                                                      int index, boolean isSelected, boolean cellHasFocus) {
+            JPanel cell = new JPanel(new BorderLayout(8, 0));
+            cell.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 8));
+            int unread = unreadCounts.getOrDefault(channel.getUuid(), 0);
+
+            if (darkMode) {
+                cell.setBackground(isSelected ? DARK_SEL : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT));
+                cell.setOpaque(true);
+
+                // Icône #
+                JLabel hashLabel = new JLabel("#");
+                hashLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+                hashLabel.setForeground(isSelected ? Color.WHITE : DARK_TEXT);
+                hashLabel.setPreferredSize(new Dimension(20, 20));
+                cell.add(hashLabel, BorderLayout.WEST);
+
+                JLabel nameLabel = new JLabel(channel.getName());
+                nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 13));
+                nameLabel.setForeground(isSelected ? Color.WHITE : (unread > 0 ? DARK_TEXT_ACT : DARK_TEXT));
+                nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
+                cell.add(nameLabel, BorderLayout.CENTER);
+
+                if (unread > 0) {
+                    JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                    badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                    badge.setForeground(Color.WHITE);
+                    badge.setBackground(DARK_BADGE);
+                    badge.setOpaque(true);
+                    badge.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+                    cell.add(badge, BorderLayout.EAST);
+                }
+            } else {
+                // Mode clair original
+                cell.setBackground(isSelected ? list.getSelectionBackground()
+                        : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
+                cell.setOpaque(true);
+                JLabel nameLabel = new JLabel("  #  " + channel.getName());
+                nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
+                nameLabel.setForeground(isSelected ? list.getSelectionForeground() : new Color(109, 40, 217));
+                nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
+                cell.add(nameLabel, BorderLayout.CENTER);
+                if (unread > 0) {
+                    JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                    badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                    badge.setForeground(Color.WHITE);
+                    badge.setBackground(new Color(220, 38, 38));
+                    badge.setOpaque(true);
+                    badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
+                    cell.add(badge, BorderLayout.EAST);
+                }
+            }
+            return cell;
+        }
     }
 }

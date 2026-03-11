@@ -30,11 +30,20 @@ public class MessageAppMainView extends JFrame {
     private static final String APP_VERSION = "Version 1.0";
     private static final String APP_AUTHOR = "Développé par BRAHIM";
 
-    // ── Palette de couleurs de l'application ─────────────────────────────
-    public static final Color COLOR_PRIMARY    = new Color(30, 58, 138);  // bleu foncé header
-    public static final Color COLOR_ACCENT     = new Color(59, 130, 246); // bleu vif bordures/titres
-    public static final Color COLOR_BG         = new Color(248, 250, 252); // fond général très clair
-    public static final Color COLOR_PANEL_BG   = Color.WHITE;
+    // ── Palette claire (ancienne, gardée pour compatibilité) ─────────────
+    public static final Color COLOR_PRIMARY    = new Color(32, 34, 37);   // dark header
+    public static final Color COLOR_ACCENT     = new Color(88, 101, 242); // Discord blurple
+    public static final Color COLOR_BG         = new Color(54, 57, 63);   // Discord message area
+    public static final Color COLOR_PANEL_BG   = new Color(47, 49, 54);   // Discord sidebar
+
+    // ── Palette Discord ───────────────────────────────────────────────────
+    public static final Color DISCORD_SIDEBAR       = new Color(47, 49, 54);
+    public static final Color DISCORD_SIDEBAR_DARK  = new Color(32, 34, 37);
+    public static final Color DISCORD_CHAT_BG       = new Color(54, 57, 63);
+    public static final Color DISCORD_TEXT          = new Color(220, 221, 222);
+    public static final Color DISCORD_TEXT_MUTED    = new Color(148, 155, 164);
+    public static final Color DISCORD_ONLINE        = new Color(59, 165, 92);
+    public static final Color DISCORD_OFFLINE       = new Color(116, 127, 141);
 
     private JLabel headerUserLabel;
 
@@ -53,6 +62,13 @@ public class MessageAppMainView extends JFrame {
     private ChannelListPanel channelListPanel;
     private MessageListPanel messageListPanel;
     private MessageSendPanel sendPanel;
+
+    /** Label d'en-tête de la conversation active (centre). */
+    private JLabel conversationTitleLabel;
+
+    /** Panel droit : membres en ligne. */
+    private DefaultListModel<User> onlineMembersModel;
+    private JList<User> onlineMembersList;
 
     /**
      * Constructeur.
@@ -139,24 +155,45 @@ public class MessageAppMainView extends JFrame {
 
     /**
      * Enregistre les panels comme observateurs de la base de données.
-     *
-     * @param database La base de données
      */
     private void registerObservers(IDatabase database) {
         if (database != null) {
             database.addObserver(userListPanel);
             database.addObserver(channelListPanel);
             database.addObserver(messageListPanel);
-            if (sendPanel != null) {
-                database.addObserver(sendPanel);
-            }
-            // Notifications MSG-010 : DM et mentions @tag
+            if (sendPanel != null) database.addObserver(sendPanel);
+            // Membres en ligne : observer les users
+            database.addObserver(new main.java.com.ubo.tp.message.core.database.IDatabaseObserver() {
+                public void notifyUserAdded(User u)       { updateOnlineMembers(); }
+                public void notifyUserDeleted(User u)     { updateOnlineMembers(); }
+                public void notifyUserModified(User u)    { updateOnlineMembers(); }
+                public void notifyMessageAdded(main.java.com.ubo.tp.message.datamodel.Message m)    { }
+                public void notifyMessageDeleted(main.java.com.ubo.tp.message.datamodel.Message m)  { }
+                public void notifyMessageModified(main.java.com.ubo.tp.message.datamodel.Message m) { }
+                public void notifyChannelAdded(Channel c)    { }
+                public void notifyChannelDeleted(Channel c)  { }
+                public void notifyChannelModified(Channel c) { }
+            });
             database.addObserver(new NotificationManager(this));
             database.addObserver(new EasterEggManager(this));
             System.out.println("[INFO] Observateurs IHM enregistrés avec succès");
         } else {
             System.err.println("[ERREUR] Database null - impossible d'enregistrer les observateurs");
         }
+    }
+
+    /** Rafraîchit la liste des membres en ligne dans la sidebar droite. */
+    private void updateOnlineMembers() {
+        if (onlineMembersModel == null || messageApp == null || messageApp.mDataManager == null) return;
+        SwingUtilities.invokeLater(() -> {
+            onlineMembersModel.clear();
+            User me = main.java.com.ubo.tp.message.core.SessionManager.getInstance().getCurrentUser();
+            for (User u : messageApp.mDataManager.getUsers()) {
+                if (u.isOnline() && (me == null || !u.getUuid().equals(me.getUuid()))) {
+                    onlineMembersModel.addElement(u);
+                }
+            }
+        });
     }
 
     /**
@@ -301,18 +338,18 @@ public class MessageAppMainView extends JFrame {
      */
     private JPanel createHeaderPanel() {
         JPanel header = new JPanel(new BorderLayout(10, 0));
-        header.setBackground(COLOR_PRIMARY);
-        header.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        header.setBackground(DISCORD_SIDEBAR_DARK);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(20, 20, 20)),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)));
 
-        // Logo / titre à gauche
         JLabel appLabel = new JLabel("💬  " + APP_TITLE);
         appLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
         appLabel.setForeground(Color.WHITE);
 
-        // Utilisateur connecté à droite
         headerUserLabel = new JLabel("");
         headerUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        headerUserLabel.setForeground(new Color(186, 207, 255));
+        headerUserLabel.setForeground(DISCORD_TEXT_MUTED);
 
         header.add(appLabel, BorderLayout.WEST);
         header.add(headerUserLabel, BorderLayout.EAST);
@@ -498,75 +535,233 @@ public class MessageAppMainView extends JFrame {
     }
 
     /**
-     * Crée le panel principal avec les listes.
+     * Crée le panel principal — layout 3 colonnes style Discord.
      */
     private JPanel createMainContentPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(8, 8));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        mainPanel.setBackground(COLOR_BG);
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 0));
+        mainPanel.setBackground(DISCORD_CHAT_BG);
 
-        // Panel de gauche : Utilisateurs + Canaux
-        JPanel leftPanel = new JPanel(new GridLayout(2, 1, 6, 6));
-        leftPanel.setPreferredSize(new Dimension(260, 0));
-        leftPanel.setBackground(new Color(241, 245, 249));
-        leftPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(203, 213, 225)),
-                BorderFactory.createEmptyBorder(4, 4, 4, 8)
-        ));
+        // ── SIDEBAR GAUCHE (canaux + utilisateurs) ────────────────────────
+        JPanel leftSidebar = new JPanel(new BorderLayout(0, 0));
+        leftSidebar.setPreferredSize(new Dimension(240, 0));
+        leftSidebar.setBackground(DISCORD_SIDEBAR);
+        leftSidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(32, 34, 37)));
 
-        userListPanel = new UserListPanel();
+        // En-tête sidebar
+        JPanel sidebarHeader = new JPanel(new BorderLayout());
+        sidebarHeader.setBackground(DISCORD_SIDEBAR_DARK);
+        sidebarHeader.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(20, 20, 20)),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+        JLabel sidebarTitle = new JLabel("💬 Messagerie");
+        sidebarTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sidebarTitle.setForeground(Color.WHITE);
+        sidebarHeader.add(sidebarTitle, BorderLayout.WEST);
+        leftSidebar.add(sidebarHeader, BorderLayout.NORTH);
+
+        // Section CANAUX
+        JLabel channelsSectionLabel = makeSectionHeader("CANAUX");
         channelListPanel = new ChannelListPanel();
+        channelListPanel.setDarkMode(true);
         if (messageApp != null && messageApp.mDataManager != null) {
             channelListPanel.setDataManager(messageApp.mDataManager);
         }
 
-        leftPanel.add(userListPanel);
-        leftPanel.add(channelListPanel);
+        // Section MESSAGES PRIVÉS
+        JLabel dmSectionLabel = makeSectionHeader("MESSAGES PRIVÉS");
+        userListPanel = new UserListPanel();
+        userListPanel.setDarkMode(true);
 
-        // Panel central : Messages + Panel d'envoi
-        JPanel centerPanel = new JPanel(new BorderLayout(6, 6));
-        centerPanel.setBackground(COLOR_BG);
+        // Split channels / users dans le sidebar
+        JSplitPane sidebarSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        sidebarSplit.setBorder(null);
+        sidebarSplit.setDividerSize(3);
+        sidebarSplit.setBackground(DISCORD_SIDEBAR);
+        sidebarSplit.setDividerLocation(280);
+        sidebarSplit.setResizeWeight(0.5);
 
+        JPanel channelSection = new JPanel(new BorderLayout());
+        channelSection.setBackground(DISCORD_SIDEBAR);
+        channelSection.add(channelsSectionLabel, BorderLayout.NORTH);
+        channelSection.add(channelListPanel, BorderLayout.CENTER);
+
+        JPanel dmSection = new JPanel(new BorderLayout());
+        dmSection.setBackground(DISCORD_SIDEBAR);
+        dmSection.add(dmSectionLabel, BorderLayout.NORTH);
+        dmSection.add(userListPanel, BorderLayout.CENTER);
+
+        sidebarSplit.setTopComponent(channelSection);
+        sidebarSplit.setBottomComponent(dmSection);
+        leftSidebar.add(sidebarSplit, BorderLayout.CENTER);
+
+        // ── CENTRE (header + messages + envoi) ───────────────────────────
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 0));
+        centerPanel.setBackground(DISCORD_CHAT_BG);
+
+        // Header de conversation
+        JPanel conversationHeader = new JPanel(new BorderLayout());
+        conversationHeader.setBackground(DISCORD_CHAT_BG);
+        conversationHeader.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(32, 34, 37)),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        conversationTitleLabel = new JLabel("  Sélectionnez une conversation...");
+        conversationTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        conversationTitleLabel.setForeground(DISCORD_TEXT_MUTED);
+        conversationHeader.add(conversationTitleLabel, BorderLayout.WEST);
+        centerPanel.add(conversationHeader, BorderLayout.NORTH);
+
+        // Liste de messages
         messageListPanel = new MessageListPanel();
-        messageListPanel.setMessageApp(messageApp); // IMPORTANT
+        messageListPanel.setMessageApp(messageApp);
         centerPanel.add(messageListPanel, BorderLayout.CENTER);
 
-        // AJOUTER LE PANEL D'ENVOI ICI
+        // Panel d'envoi
         if (messageApp != null && messageApp.mDataManager != null) {
             sendPanel = new MessageSendPanel(messageApp.mDataManager);
-            sendPanel.setPreferredSize(new Dimension(0, 150));
+            sendPanel.setPreferredSize(new Dimension(0, 160));
             centerPanel.add(sendPanel, BorderLayout.SOUTH);
         }
 
-        // Ajout des panels
-        mainPanel.add(leftPanel, BorderLayout.WEST);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        // ── SIDEBAR DROITE (membres en ligne) ─────────────────────────────
+        JPanel rightSidebar = createOnlineMembersPanel();
+        rightSidebar.setPreferredSize(new Dimension(200, 0));
 
-        // INTERACTEURS : Sélection d'un utilisateur
+        // ── Assemblage ────────────────────────────────────────────────────
+        mainPanel.add(leftSidebar, BorderLayout.WEST);
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(rightSidebar, BorderLayout.EAST);
+
+        // ── Listeners de sélection ────────────────────────────────────────
+
+        // Clic sur un utilisateur → ouvre la conversation DM
         userListPanel.addSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 User selectedUser = userListPanel.getSelectedUser();
                 if (selectedUser != null) {
-                    System.out.println("[INFO] Utilisateur sélectionné : " + selectedUser.getUserTag());
+                    String display = "@" + selectedUser.getUserTag();
+                    conversationTitleLabel.setText("  " + display);
+                    conversationTitleLabel.setForeground(DISCORD_TEXT);
                     messageListPanel.filterByUser(selectedUser.getUuid());
                     userListPanel.markAsRead(selectedUser.getUuid());
+                    if (sendPanel != null)
+                        sendPanel.setRecipient(selectedUser.getUuid(), display);
+                    // Désélectionner la liste des canaux
+                    channelListPanel.clearSelection();
                 }
             }
         });
 
-        // INTERACTEURS : Sélection d'un canal
+        // Clic sur un canal → ouvre la conversation canal
         channelListPanel.addSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 Channel selectedChannel = channelListPanel.getSelectedChannel();
                 if (selectedChannel != null) {
-                    System.out.println("[INFO] Canal sélectionné : " + selectedChannel.getName());
+                    String display = "#" + selectedChannel.getName();
+                    conversationTitleLabel.setText("  " + display);
+                    conversationTitleLabel.setForeground(DISCORD_TEXT);
                     messageListPanel.filterByChannel(selectedChannel.getUuid());
                     channelListPanel.markAsRead(selectedChannel.getUuid());
+                    if (sendPanel != null)
+                        sendPanel.setRecipient(selectedChannel.getUuid(), display);
+                    // Désélectionner la liste des utilisateurs
+                    userListPanel.clearSelection();
                 }
             }
         });
 
         return mainPanel;
+    }
+
+    /** Crée un label de section style Discord (ex: "CANAUX"). */
+    private JLabel makeSectionHeader(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 11));
+        lbl.setForeground(DISCORD_TEXT_MUTED);
+        lbl.setBorder(BorderFactory.createEmptyBorder(14, 14, 4, 14));
+        lbl.setOpaque(true);
+        lbl.setBackground(DISCORD_SIDEBAR);
+        return lbl;
+    }
+
+    /** Crée le panel de droite affichant les membres en ligne. */
+    private JPanel createOnlineMembersPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
+        panel.setBackground(DISCORD_SIDEBAR);
+        panel.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(32, 34, 37)));
+
+        // En-tête
+        JLabel header = new JLabel("  EN LIGNE");
+        header.setFont(new Font("SansSerif", Font.BOLD, 11));
+        header.setForeground(DISCORD_TEXT_MUTED);
+        header.setOpaque(true);
+        header.setBackground(DISCORD_SIDEBAR_DARK);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(20, 20, 20)),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        panel.add(header, BorderLayout.NORTH);
+
+        // Liste
+        onlineMembersModel = new DefaultListModel<>();
+        onlineMembersList = new JList<>(onlineMembersModel);
+        onlineMembersList.setBackground(DISCORD_SIDEBAR);
+        onlineMembersList.setFixedCellHeight(44);
+        onlineMembersList.setCellRenderer(new ListCellRenderer<User>() {
+            private final Color[] AVATAR_COLORS = {
+                new Color(88, 101, 242), new Color(59, 165, 92),  new Color(237, 66, 69),
+                new Color(250, 168, 26), new Color(235, 69, 158), new Color(149, 128, 255),
+                new Color(32, 200, 255), new Color(255, 115, 55),
+            };
+            @Override
+            public Component getListCellRendererComponent(JList<? extends User> list, User user,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                JPanel cell = new JPanel(new BorderLayout(8, 0));
+                cell.setBackground(DISCORD_SIDEBAR);
+                cell.setOpaque(true);
+                cell.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+                // Avatar
+                JPanel avatar = new JPanel(null) {
+                    @Override protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        int ci = Math.abs(user.getUserTag().hashCode()) % AVATAR_COLORS.length;
+                        g2.setColor(AVATAR_COLORS[ci]);
+                        g2.fillOval(0, 0, 32, 32);
+                        g2.setColor(Color.WHITE);
+                        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+                        String letter = user.getName().isEmpty() ? "?" :
+                                String.valueOf(user.getName().charAt(0)).toUpperCase();
+                        FontMetrics fm = g2.getFontMetrics();
+                        g2.drawString(letter, (32 - fm.stringWidth(letter)) / 2,
+                                (32 + fm.getAscent() - fm.getDescent()) / 2);
+                        g2.setColor(DISCORD_SIDEBAR);
+                        g2.fillOval(20, 20, 14, 14);
+                        g2.setColor(DISCORD_ONLINE);
+                        g2.fillOval(22, 22, 10, 10);
+                        g2.dispose();
+                    }
+                };
+                avatar.setOpaque(false);
+                avatar.setPreferredSize(new Dimension(36, 36));
+
+                JPanel txt = new JPanel();
+                txt.setOpaque(false);
+                txt.setLayout(new BoxLayout(txt, BoxLayout.Y_AXIS));
+                JLabel name = new JLabel("@" + user.getUserTag());
+                name.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                name.setForeground(DISCORD_TEXT);
+                JLabel sub = new JLabel(user.getName());
+                sub.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                sub.setForeground(DISCORD_TEXT_MUTED);
+                txt.add(name); txt.add(sub);
+
+                cell.add(avatar, BorderLayout.WEST);
+                cell.add(txt, BorderLayout.CENTER);
+                return cell;
+            }
+        });
+        panel.add(new JScrollPane(onlineMembersList), BorderLayout.CENTER);
+        return panel;
     }
 
     // ─── Easter Eggs (Séance 6) ──────────────────────────────────────────────

@@ -28,62 +28,77 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     private JLabel countLabel;
     private JTextField searchField;
 
-    /**
-     * Liste complète de tous les utilisateurs reçus (avant filtre de recherche).
-     * On garde cette liste séparée pour pouvoir refilter à chaque frappe
-     * sans perdre les éléments qui ne correspondent pas au filtre actuel.
-     */
     private final List<User> allUsers = new ArrayList<>();
-
-    /** Compteurs de DM non lus par UUID d'expéditeur (CHN-009). */
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
-
-    /** UUID de l'utilisateur dont la conversation est actuellement affichée. */
     private UUID currentlyViewingUuid = null;
+
+    // ── Dark mode ─────────────────────────────────────────────────────────
+    private boolean darkMode = false;
+
+    static final Color DARK_BG       = new Color(47, 49, 54);
+    static final Color DARK_BG_ALT   = new Color(54, 57, 63);
+    static final Color DARK_SEL      = new Color(88, 101, 242);
+    static final Color DARK_TEXT     = new Color(148, 155, 164);
+    static final Color DARK_TEXT_ACT = new Color(220, 221, 222);
+    static final Color DARK_ONLINE   = new Color(59, 165, 92);
+    static final Color DARK_OFFLINE  = new Color(116, 127, 141);
+    static final Color DARK_BADGE    = new Color(237, 66, 69);
+
+    private static final Color[] AVATAR_COLORS = {
+        new Color(88, 101, 242), new Color(59, 165, 92),  new Color(237, 66, 69),
+        new Color(250, 168, 26), new Color(235, 69, 158), new Color(149, 128, 255),
+        new Color(32, 200, 255), new Color(255, 115, 55),
+    };
 
     public UserListPanel() {
         initComponents();
+    }
+
+    /** Active le rendu sombre style Discord. */
+    public void setDarkMode(boolean dark) {
+        this.darkMode = dark;
+        if (dark) {
+            setBackground(DARK_BG);
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            userList.setBackground(DARK_BG);
+            userList.setForeground(DARK_TEXT_ACT);
+            userList.setSelectionBackground(DARK_SEL);
+            userList.setSelectionForeground(Color.WHITE);
+        }
+        repaint();
     }
 
     private void initComponents() {
         setLayout(new BorderLayout());
         TitledBorder userBorder = BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
-                "Utilisateurs connectés", TitledBorder.LEFT, TitledBorder.TOP);
+                "Utilisateurs", TitledBorder.LEFT, TitledBorder.TOP);
         userBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
         userBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
         setBorder(userBorder);
         setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
-        // ── HAUT : barre de recherche ─────────────────────────────────────────
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
         searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher un utilisateur (@tag ou nom)");
-        // Hint visuel en placeholder
-        searchField.putClientProperty("JTextField.placeholderText", "🔍 Rechercher...");
-
-        // À chaque frappe, on refiltre la liste
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
         });
-
         searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
         add(searchPanel, BorderLayout.NORTH);
 
-        // ── CENTRE : liste des utilisateurs ──────────────────────────────────
         userListModel = new DefaultListModel<>();
         userList = new JList<>(userListModel);
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         userList.setCellRenderer(new UserListCellRenderer());
-        userList.setFixedCellHeight(40);
+        userList.setFixedCellHeight(48);
         userList.setBackground(Color.WHITE);
         add(new JScrollPane(userList), BorderLayout.CENTER);
 
-        // ── BAS : compteur ────────────────────────────────────────────────────
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         infoPanel.setBackground(new Color(248, 250, 252));
         infoPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
@@ -101,10 +116,6 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         });
     }
 
-    /**
-     * Refiltre la liste affichée selon le texte dans le champ de recherche.
-     * On cherche dans le tag ET le nom de l'utilisateur (insensible à la casse).
-     */
     private void applyFilter() {
         String query = searchField.getText().trim().toLowerCase();
         userListModel.clear();
@@ -117,19 +128,22 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         }
     }
 
-    public User getSelectedUser() {
-        return userList.getSelectedValue();
+    private void sortUsers() {
+        allUsers.sort((a, b) -> {
+            if (a.isOnline() != b.isOnline()) return a.isOnline() ? -1 : 1;
+            return a.getUserTag().compareToIgnoreCase(b.getUserTag());
+        });
     }
+
+    public User getSelectedUser() { return userList.getSelectedValue(); }
 
     @Override
     public void notifyUserAdded(User addedUser) {
         SwingUtilities.invokeLater(() -> {
-            // Ajouter à la liste complète si pas déjà présent
             boolean exists = allUsers.stream().anyMatch(u -> u.getUuid().equals(addedUser.getUuid()));
-            if (!exists) {
-                allUsers.add(addedUser);
-            }
-            applyFilter(); // refilter pour mettre à jour l'affichage
+            if (!exists) allUsers.add(addedUser);
+            sortUsers();
+            applyFilter();
         });
     }
 
@@ -144,13 +158,13 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     @Override
     public void notifyUserModified(User modifiedUser) {
         SwingUtilities.invokeLater(() -> {
-            // Remplacer dans la liste complète
             for (int i = 0; i < allUsers.size(); i++) {
                 if (allUsers.get(i).getUuid().equals(modifiedUser.getUuid())) {
                     allUsers.set(i, modifiedUser);
                     break;
                 }
             }
+            sortUsers();
             applyFilter();
         });
     }
@@ -160,82 +174,119 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
             if (currentUser == null) return;
-
-            // Ignorer ses propres messages
             if (m.getSender().getUuid().equals(currentUser.getUuid())) return;
-
-            // Ne compter que les DM adressés à l'utilisateur connecté
             if (!m.getRecipient().equals(currentUser.getUuid())) return;
-
             UUID senderUuid = m.getSender().getUuid();
-
-            // Ne pas compter si la conversation avec cet expéditeur est déjà ouverte
             if (senderUuid.equals(currentlyViewingUuid)) return;
-
             unreadCounts.merge(senderUuid, 1, Integer::sum);
             userList.repaint();
         });
     }
 
-    /**
-     * Marque tous les DM d'un utilisateur comme lus (CHN-009).
-     *
-     * @param userUuid UUID de l'utilisateur dont la conversation est ouverte
-     */
     public void markAsRead(UUID userUuid) {
         currentlyViewingUuid = userUuid;
         unreadCounts.remove(userUuid);
         userList.repaint();
     }
 
-    @Override public void notifyMessageDeleted(Message m)  { /* Non utilisé */ }
-    @Override public void notifyMessageModified(Message m) { /* Non utilisé */ }
-    @Override public void notifyChannelAdded(Channel c)    { /* Non utilisé */ }
-    @Override public void notifyChannelDeleted(Channel c)  { /* Non utilisé */ }
-    @Override public void notifyChannelModified(Channel c) { /* Non utilisé */ }
+    @Override public void notifyMessageDeleted(Message m)  { }
+    @Override public void notifyMessageModified(Message m) { }
+    @Override public void notifyChannelAdded(Channel c)    { }
+    @Override public void notifyChannelDeleted(Channel c)  { }
+    @Override public void notifyChannelModified(Channel c) { }
 
-    private class UserListCellRenderer extends DefaultListCellRenderer {
-        private  final Color COLOR_BADGE_BG = new Color(220, 38, 38);
-        private  final Color COLOR_TEXT     = new Color(30, 41, 59);
-
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                      int index, boolean isSelected, boolean cellHasFocus) {
-            if (!(value instanceof User)) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                return this;
-            }
-            User user = (User) value;
-            int unread = unreadCounts.getOrDefault(user.getUuid(), 0);
-
-            JPanel cell = new JPanel(new BorderLayout(4, 0));
-            cell.setOpaque(true);
-            cell.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            cell.setBackground(isSelected ? list.getSelectionBackground()
-                    : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
-
-            String statusIcon = user.isOnline() ? "🟢" : "⚫";
-            JLabel nameLabel = new JLabel(statusIcon + "  @" + user.getUserTag() + "  (" + user.getName() + ")");
-            nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
-            nameLabel.setForeground(isSelected ? list.getSelectionForeground() : COLOR_TEXT);
-            nameLabel.setToolTipText("UUID: " + user.getUuid());
-            cell.add(nameLabel, BorderLayout.CENTER);
-
-            if (unread > 0) {
-                JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
-                badge.setFont(new Font("SansSerif", Font.BOLD, 10));
-                badge.setForeground(Color.WHITE);
-                badge.setBackground(COLOR_BADGE_BG);
-                badge.setOpaque(true);
-                badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
-                cell.add(badge, BorderLayout.EAST);
-            }
-
-            return cell;
-        }
-    }
+    public void clearSelection() { userList.clearSelection(); }
 
     public void addSelectionListener(javax.swing.event.ListSelectionListener listener) {
         userList.addListSelectionListener(listener);
+    }
+
+    // ── Renderer ──────────────────────────────────────────────────────────
+
+    private class UserListCellRenderer implements ListCellRenderer<User> {
+        @Override
+        public Component getListCellRendererComponent(JList<? extends User> list, User user,
+                                                      int index, boolean isSelected, boolean cellHasFocus) {
+            JPanel cell = new JPanel(new BorderLayout(8, 0));
+            cell.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 8));
+            int unread = unreadCounts.getOrDefault(user.getUuid(), 0);
+
+            if (darkMode) {
+                cell.setBackground(isSelected ? DARK_SEL : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT));
+                cell.setOpaque(true);
+
+                // Avatar avec initiale et pastille de statut
+                JPanel avatarPanel = new JPanel(null) {
+                    @Override protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        int idx = Math.abs(user.getUserTag().hashCode()) % AVATAR_COLORS.length;
+                        g2.setColor(AVATAR_COLORS[idx]);
+                        g2.fillOval(0, 0, 32, 32);
+                        g2.setColor(Color.WHITE);
+                        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+                        String letter = user.getName().isEmpty() ? "?" :
+                                String.valueOf(user.getName().charAt(0)).toUpperCase();
+                        FontMetrics fm = g2.getFontMetrics();
+                        g2.drawString(letter, (32 - fm.stringWidth(letter)) / 2,
+                                (32 + fm.getAscent() - fm.getDescent()) / 2);
+                        // Pastille statut
+                        g2.setColor(cell.getBackground());
+                        g2.fillOval(20, 20, 14, 14);
+                        g2.setColor(user.isOnline() ? DARK_ONLINE : DARK_OFFLINE);
+                        g2.fillOval(22, 22, 10, 10);
+                        g2.dispose();
+                    }
+                };
+                avatarPanel.setOpaque(false);
+                avatarPanel.setPreferredSize(new Dimension(36, 36));
+
+                // Texte
+                JPanel textPanel = new JPanel();
+                textPanel.setOpaque(false);
+                textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+                JLabel nameLabel = new JLabel("@" + user.getUserTag());
+                nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 13));
+                nameLabel.setForeground(isSelected ? Color.WHITE : (user.isOnline() ? DARK_TEXT_ACT : DARK_TEXT));
+                JLabel subLabel = new JLabel(user.getName());
+                subLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                subLabel.setForeground(isSelected ? new Color(220, 220, 255) : DARK_TEXT);
+                textPanel.add(nameLabel);
+                textPanel.add(subLabel);
+
+                cell.add(avatarPanel, BorderLayout.WEST);
+                cell.add(textPanel, BorderLayout.CENTER);
+
+                if (unread > 0) {
+                    JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                    badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                    badge.setForeground(Color.WHITE);
+                    badge.setBackground(DARK_BADGE);
+                    badge.setOpaque(true);
+                    badge.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+                    cell.add(badge, BorderLayout.EAST);
+                }
+            } else {
+                // Mode clair original
+                cell.setBackground(isSelected ? list.getSelectionBackground()
+                        : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
+                cell.setOpaque(true);
+                String statusIcon = user.isOnline() ? "🟢" : "⚫";
+                JLabel nameLabel = new JLabel(statusIcon + "  @" + user.getUserTag() + "  (" + user.getName() + ")");
+                nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
+                nameLabel.setForeground(isSelected ? list.getSelectionForeground() : new Color(30, 41, 59));
+                cell.add(nameLabel, BorderLayout.CENTER);
+                if (unread > 0) {
+                    JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
+                    badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+                    badge.setForeground(Color.WHITE);
+                    badge.setBackground(new Color(220, 38, 38));
+                    badge.setOpaque(true);
+                    badge.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
+                    cell.add(badge, BorderLayout.EAST);
+                }
+            }
+            return cell;
+        }
     }
 }
