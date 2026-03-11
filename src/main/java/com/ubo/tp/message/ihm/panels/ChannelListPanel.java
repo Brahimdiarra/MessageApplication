@@ -187,8 +187,11 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
     private void applyFilter() {
         String query = searchField.getText().trim().toLowerCase();
+        User currentUser = SessionManager.getInstance().getCurrentUser();
         channelListModel.clear();
         for (Channel c : allChannels) {
+            // Ne montrer que les canaux accessibles à l'utilisateur connecté
+            if (!c.isMember(currentUser)) continue;
             if (query.isEmpty() || c.getName().toLowerCase().contains(query))
                 channelListModel.addElement(c);
         }
@@ -272,17 +275,20 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
                 cell.setBackground(isSelected ? DARK_SEL : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT));
                 cell.setOpaque(true);
 
-                // Icône #
-                JLabel hashLabel = new JLabel("#");
-                hashLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
-                hashLabel.setForeground(isSelected ? Color.WHITE : DARK_TEXT);
-                hashLabel.setPreferredSize(new Dimension(20, 20));
+                // Icône # ou 🔒
+                String icon = channel.isPrivate() ? "🔒" : "#";
+                JLabel hashLabel = new JLabel(icon);
+                hashLabel.setFont(new Font("Segoe UI Emoji", Font.BOLD, channel.isPrivate() ? 13 : 18));
+                hashLabel.setForeground(isSelected ? Color.WHITE : (channel.isPrivate() ? new Color(250, 168, 26) : DARK_TEXT));
+                hashLabel.setPreferredSize(new Dimension(22, 20));
                 cell.add(hashLabel, BorderLayout.WEST);
 
+                String tooltip = "Créateur : " + channel.getCreator().getName()
+                        + (channel.isPrivate() ? " | Canal privé (" + channel.getUsers().size() + " membres)" : " | Canal public");
                 JLabel nameLabel = new JLabel(channel.getName());
                 nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 13));
                 nameLabel.setForeground(isSelected ? Color.WHITE : (unread > 0 ? DARK_TEXT_ACT : DARK_TEXT));
-                nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
+                nameLabel.setToolTipText(tooltip);
                 cell.add(nameLabel, BorderLayout.CENTER);
 
                 if (unread > 0) {

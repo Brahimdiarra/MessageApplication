@@ -91,6 +91,28 @@ public class Channel extends AbstractMessageAppObject implements IMessageRecipie
 	}
 
 	/**
+	 * @return true si ce canal est privé (liste de membres non vide).
+	 */
+	public boolean isPrivate() {
+		return mPrivate;
+	}
+
+	/**
+	 * Vérifie si un utilisateur est membre de ce canal.
+	 * - Canal public : tout le monde est membre.
+	 * - Canal privé : le créateur ET les utilisateurs explicitement ajoutés.
+	 *
+	 * @param user l'utilisateur à vérifier
+	 * @return true si l'utilisateur peut accéder à ce canal
+	 */
+	public boolean isMember(User user) {
+		if (user == null) return false;
+		if (!mPrivate) return true; // canal public → tout le monde
+		if (mCreator != null && mCreator.getUuid().equals(user.getUuid())) return true;
+		return mUsers.stream().anyMatch(u -> u.getUuid().equals(user.getUuid()));
+	}
+
+	/**
 	 * @return le corps du message.
 	 */
 	public String getName() {

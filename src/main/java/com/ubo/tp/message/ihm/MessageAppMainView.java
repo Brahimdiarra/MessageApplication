@@ -656,14 +656,19 @@ public class MessageAppMainView extends JFrame {
             if (!e.getValueIsAdjusting()) {
                 Channel selectedChannel = channelListPanel.getSelectedChannel();
                 if (selectedChannel != null) {
-                    String display = "#" + selectedChannel.getName();
+                    User me = main.java.com.ubo.tp.message.core.SessionManager.getInstance().getCurrentUser();
+                    String display = (selectedChannel.isPrivate() ? "🔒 #" : "# ") + selectedChannel.getName();
                     conversationTitleLabel.setText("  " + display);
                     conversationTitleLabel.setForeground(DISCORD_TEXT);
                     messageListPanel.filterByChannel(selectedChannel.getUuid());
                     channelListPanel.markAsRead(selectedChannel.getUuid());
-                    if (sendPanel != null)
-                        sendPanel.setRecipient(selectedChannel.getUuid(), display);
-                    // Désélectionner la liste des utilisateurs
+                    if (sendPanel != null) {
+                        if (selectedChannel.isMember(me)) {
+                            sendPanel.setRecipient(selectedChannel.getUuid(), display);
+                        } else {
+                            sendPanel.clearRecipient();
+                        }
+                    }
                     userListPanel.clearSelection();
                 }
             }

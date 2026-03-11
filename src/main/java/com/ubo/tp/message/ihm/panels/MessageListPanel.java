@@ -278,6 +278,7 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
     /**
      * Filtre les messages pour n'afficher que ceux d'un canal spécifique.
+     * Vérifie que l'utilisateur connecté est membre du canal avant d'afficher.
      *
      * @param channelUuid UUID du canal
      */
@@ -286,12 +287,25 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         currentFilterUuid = channelUuid;
         currentMessages.clear();
 
-        if (messageApp != null && messageApp.getmDataManager() != null) {
-            Set<Message> allMessages = messageApp.getmDataManager().getMessages();
-            for (Message message : allMessages) {
-                if (message.getRecipient().equals(channelUuid)) {
-                    currentMessages.add(message);
-                }
+        if (messageApp == null || messageApp.getmDataManager() == null) { applySearch(); return; }
+
+        // Trouver le canal et vérifier l'accès
+        User currentUser = main.java.com.ubo.tp.message.core.SessionManager.getInstance().getCurrentUser();
+        main.java.com.ubo.tp.message.datamodel.Channel targetChannel = null;
+        for (main.java.com.ubo.tp.message.datamodel.Channel ch : messageApp.getmDataManager().getChannels()) {
+            if (ch.getUuid().equals(channelUuid)) { targetChannel = ch; break; }
+        }
+
+        if (targetChannel != null && !targetChannel.isMember(currentUser)) {
+            // L'utilisateur n'est pas membre : on n'affiche rien
+            applySearch();
+            return;
+        }
+
+        Set<Message> allMessages = messageApp.getmDataManager().getMessages();
+        for (Message message : allMessages) {
+            if (message.getRecipient().equals(channelUuid)) {
+                currentMessages.add(message);
             }
         }
         applySearch();
