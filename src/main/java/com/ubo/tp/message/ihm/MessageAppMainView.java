@@ -4,6 +4,7 @@ import main.java.com.ubo.tp.message.core.database.IDatabase;
 import main.java.com.ubo.tp.message.datamodel.Channel;
 import main.java.com.ubo.tp.message.datamodel.User;
 import main.java.com.ubo.tp.message.ihm.dialog.UserProfileDialog;
+import main.java.com.ubo.tp.message.ihm.notification.NotificationManager;
 import main.java.com.ubo.tp.message.ihm.panels.ChannelListPanel;
 import main.java.com.ubo.tp.message.ihm.panels.MessageListPanel;
 import main.java.com.ubo.tp.message.ihm.panels.MessageSendPanel;
@@ -146,6 +147,8 @@ public class MessageAppMainView extends JFrame {
             if (sendPanel != null) {
                 database.addObserver(sendPanel);
             }
+            // Notifications MSG-010 : DM et mentions @tag
+            database.addObserver(new NotificationManager(this));
             System.out.println("[INFO] Observateurs IHM enregistrés avec succès");
         } else {
             System.err.println("[ERREUR] Database null - impossible d'enregistrer les observateurs");
