@@ -13,8 +13,13 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Panel de saisie et d'envoi de messages.
@@ -29,6 +34,54 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
     private DefaultComboBoxModel<RecipientItem> recipientModel;
     private DataManager dataManager;
     private JLabel charCountLabel;
+    private JButton emojiPickerBtn;
+    private JPopupMenu autocompletePopup = new JPopupMenu();
+    private int autocompleteColonPos = -1;
+
+    /** Table de correspondance raccourci → emoji. */
+    private static final Map<String, String> EMOJI_MAP = new LinkedHashMap<>();
+    static {
+        EMOJI_MAP.put(":smile:",      "\uD83D\uDE0A");
+        EMOJI_MAP.put(":smirk:",      "\uD83D\uDE0F");
+        EMOJI_MAP.put(":sad:",        "\uD83D\uDE22");
+        EMOJI_MAP.put(":heart:",      "\u2764\uFE0F");
+        EMOJI_MAP.put(":fire:",       "\uD83D\uDD25");
+        EMOJI_MAP.put(":thumbsup:",   "\uD83D\uDC4D");
+        EMOJI_MAP.put(":thumbsdown:", "\uD83D\uDC4E");
+        EMOJI_MAP.put(":laugh:",      "\uD83D\uDE02");
+        EMOJI_MAP.put(":wink:",       "\uD83D\uDE09");
+        EMOJI_MAP.put(":wow:",        "\uD83D\uDE2E");
+        EMOJI_MAP.put(":party:",      "\uD83C\uDF89");
+        EMOJI_MAP.put(":eyes:",       "\uD83D\uDC40");
+        EMOJI_MAP.put(":star:",       "\u2B50");
+        EMOJI_MAP.put(":check:",      "\u2705");
+        EMOJI_MAP.put(":wave:",       "\uD83D\uDC4B");
+        EMOJI_MAP.put(":clap:",       "\uD83D\uDC4F");
+        EMOJI_MAP.put(":100:",        "\uD83D\uDCAF");
+        EMOJI_MAP.put(":rocket:",     "\uD83D\uDE80");
+    }
+    /** Couleur de fond pour chaque emoji dans le sélecteur (compatible Java 8). */
+    private static final Map<String, Color> EMOJI_COLORS = new LinkedHashMap<>();
+    static {
+        EMOJI_COLORS.put(":smile:",      new Color(255, 230, 100));
+        EMOJI_COLORS.put(":smirk:",      new Color(255, 200,  80));
+        EMOJI_COLORS.put(":sad:",        new Color(147, 197, 253));
+        EMOJI_COLORS.put(":heart:",      new Color(252, 165, 165));
+        EMOJI_COLORS.put(":fire:",       new Color(253, 186,  74));
+        EMOJI_COLORS.put(":thumbsup:",   new Color( 94, 234, 212));
+        EMOJI_COLORS.put(":thumbsdown:", new Color(196, 181, 253));
+        EMOJI_COLORS.put(":laugh:",      new Color(254, 240, 138));
+        EMOJI_COLORS.put(":wink:",       new Color(253, 224, 132));
+        EMOJI_COLORS.put(":wow:",        new Color(134, 239, 172));
+        EMOJI_COLORS.put(":party:",      new Color(216, 180, 254));
+        EMOJI_COLORS.put(":eyes:",       new Color(186, 230, 253));
+        EMOJI_COLORS.put(":star:",       new Color(253, 224,  71));
+        EMOJI_COLORS.put(":check:",      new Color(134, 239, 172));
+        EMOJI_COLORS.put(":wave:",       new Color(147, 197, 253));
+        EMOJI_COLORS.put(":clap:",       new Color(253, 186,  74));
+        EMOJI_COLORS.put(":100:",        new Color(252, 165, 165));
+        EMOJI_COLORS.put(":rocket:",     new Color(147, 197, 253));
+    }
 
     /**
      * Constructeur.
@@ -88,6 +141,14 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
         bottomPanel.setBackground(new Color(248, 250, 252));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        emojiPickerBtn = new JButton("\uD83D\uDE0A");
+        emojiPickerBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        emojiPickerBtn.setMargin(new java.awt.Insets(2, 4, 2, 4));
+        emojiPickerBtn.setToolTipText("Insérer un emoji (ou tapez :raccourci:)");
+        emojiPickerBtn.setBorderPainted(false);
+        emojiPickerBtn.setFocusPainted(false);
+        emojiPickerBtn.addActionListener(e2 -> showEmojiPicker());
+        bottomPanel.add(emojiPickerBtn);
         bottomPanel.add(charCountLabel);
         sendButton = new JButton("  Envoyer  ");
         sendButton.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -121,8 +182,14 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
 
         // Listener pour mettre à jour le compteur à chaque frappe
         messageTextArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateCharCount(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateCharCount(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateCharCount();
+                SwingUtilities.invokeLater(MessageSendPanel.this::checkAutocomplete);
+            }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateCharCount();
+                SwingUtilities.invokeLater(MessageSendPanel.this::hideAutocomplete);
+            }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCharCount(); }
 
             private void updateCharCount() {
@@ -173,6 +240,9 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
     private void sendMessage() {
         // Récupérer le texte du message
         String messageText = messageTextArea.getText().trim();
+
+        // Remplacer les raccourcis :emoji: par le vrai emoji
+        messageText = applyEmojiShortcuts(messageText);
 
         if (messageText.isEmpty()) {
             JOptionPane.showMessageDialog(
@@ -350,5 +420,104 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
 
             return this;
         }
+    }
+
+    // ── Emoji autocomplete ───────────────────────────────────────────────────
+
+    /** Remplace tous les raccourcis :shortcut: par leur emoji correspondant. */
+    private String applyEmojiShortcuts(String text) {
+        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
+            text = text.replace(entry.getKey(), entry.getValue());
+        }
+        return text;
+    }
+
+    /** Vérifie le texte courant et affiche le popup d'autocomplétion si pertinent. */
+    private void checkAutocomplete() {
+        String text = messageTextArea.getText();
+        int caretPos = messageTextArea.getCaretPosition();
+        if (caretPos == 0) { hideAutocomplete(); return; }
+
+        // Trouver le ":" le plus récent avant le caret
+        int colonPos = -1;
+        for (int i = caretPos - 1; i >= 0; i--) {
+            char ch = text.charAt(i);
+            if (ch == ':'  ) { colonPos = i; break; }
+            if (ch == ' ' || ch == '\n') break;
+        }
+        if (colonPos < 0) { hideAutocomplete(); return; }
+
+        String partial = text.substring(colonPos, caretPos); // ex: ":sm"
+        // On n'affiche pas si le raccourci est déjà fermé
+        if (partial.length() > 1 && partial.endsWith(":")) { hideAutocomplete(); return; }
+
+        List<String> matches = EMOJI_MAP.keySet().stream()
+                .filter(k -> k.startsWith(partial) && !k.equals(partial))
+                .collect(Collectors.toList());
+        if (matches.isEmpty()) { hideAutocomplete(); return; }
+
+        autocompleteColonPos = colonPos;
+        showAutocompletePopup(matches);
+    }
+
+    /** Affiche le popup d'autocomplétion avec les raccourcis correspondants. */
+    private void showAutocompletePopup(List<String> matches) {
+        autocompletePopup.removeAll();
+        for (String shortcut : matches) {
+            String emoji = EMOJI_MAP.get(shortcut);
+            JMenuItem item = new JMenuItem(emoji + "  " + shortcut);
+            item.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+            final int pos = autocompleteColonPos;
+            item.addActionListener(ae -> SwingUtilities.invokeLater(() -> {
+                try {
+                    int caret = messageTextArea.getCaretPosition();
+                    messageTextArea.getDocument().remove(pos, caret - pos);
+                    messageTextArea.getDocument().insertString(pos, emoji, null);
+                } catch (Exception ex) { /* ignore */ }
+            }));
+            autocompletePopup.add(item);
+        }
+        try {
+            java.awt.Rectangle r = messageTextArea.modelToView(autocompleteColonPos);
+            if (r != null) autocompletePopup.show(messageTextArea, r.x, r.y - autocompletePopup.getPreferredSize().height - 4);
+        } catch (Exception ex) { /* ignore */ }
+    }
+
+    /** Cache le popup d'autocomplétion. */
+    private void hideAutocomplete() {
+        if (autocompletePopup.isVisible()) autocompletePopup.setVisible(false);
+    }
+
+    /** Affiche un sélecteur d'emoji visuel (grille). */
+    private void showEmojiPicker() {
+        JPopupMenu picker = new JPopupMenu();
+        JPanel grid = new JPanel(new java.awt.GridLayout(0, 4, 3, 3));
+        grid.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        grid.setBackground(new Color(248, 250, 252));
+        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
+            Color bg = EMOJI_COLORS.getOrDefault(entry.getKey(), new Color(220, 220, 220));
+            // JLabel respecte setBackground sous Nimbus, contrairement à JButton
+            JLabel lbl = new JLabel(entry.getValue(), JLabel.CENTER);
+            lbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+            lbl.setToolTipText(entry.getKey());
+            lbl.setBackground(bg);
+            lbl.setOpaque(true);
+            lbl.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(bg.darker(), 1, true),
+                    BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+            lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            lbl.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                    messageTextArea.insert(entry.getValue(), messageTextArea.getCaretPosition());
+                    picker.setVisible(false);
+                    messageTextArea.requestFocusInWindow();
+                }
+                @Override public void mouseEntered(java.awt.event.MouseEvent e) { lbl.setBackground(bg.darker()); }
+                @Override public void mouseExited(java.awt.event.MouseEvent e)  { lbl.setBackground(bg); }
+            });
+            grid.add(lbl);
+        }
+        picker.add(grid);
+        picker.show(emojiPickerBtn, 0, -picker.getPreferredSize().height - 2);
     }
 }

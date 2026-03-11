@@ -12,6 +12,9 @@ import main.java.com.ubo.tp.message.ihm.panels.UserListPanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.util.Random;
+import main.java.com.ubo.tp.message.ihm.easteregg.EasterEggManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -149,6 +152,7 @@ public class MessageAppMainView extends JFrame {
             }
             // Notifications MSG-010 : DM et mentions @tag
             database.addObserver(new NotificationManager(this));
+            database.addObserver(new EasterEggManager(this));
             System.out.println("[INFO] Observateurs IHM enregistrés avec succès");
         } else {
             System.err.println("[ERREUR] Database null - impossible d'enregistrer les observateurs");
@@ -563,5 +567,119 @@ public class MessageAppMainView extends JFrame {
         });
 
         return mainPanel;
+    }
+
+    // ─── Easter Eggs (Séance 6) ──────────────────────────────────────────────
+
+    /**
+     * /party — animation confetti pendant ~3 secondes.
+     */
+    public void triggerParty() {
+        int w = getWidth(), h = getHeight();
+        int NUM = 90;
+        float[] x  = new float[NUM]; float[] y  = new float[NUM];
+        float[] vx = new float[NUM]; float[] vy = new float[NUM];
+        Color[] palette = {
+            new Color(255,  87,  51), new Color(255, 195,   0),
+            new Color( 47, 213, 133), new Color( 37,  99, 235),
+            new Color(168,  85, 247), new Color(255, 110, 199)
+        };
+        Random rand = new Random();
+        for (int i = 0; i < NUM; i++) {
+            x[i]  = rand.nextFloat() * w;
+            y[i]  = -rand.nextFloat() * h;
+            vx[i] = (rand.nextFloat() - 0.5f) * 5;
+            vy[i] = 3 + rand.nextFloat() * 5;
+        }
+        JWindow overlay = new JWindow(this);
+        overlay.setBounds(getBounds());
+        overlay.setBackground(new Color(0, 0, 0, 0));
+        JPanel canvas = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                // fond transparent
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setColor(new Color(0, 0, 0, 0));
+                g2.clearRect(0, 0, getWidth(), getHeight());
+                for (int i = 0; i < NUM; i++) {
+                    g2.setColor(palette[i % palette.length]);
+                    int size = 8 + (i % 5) * 2;
+                    if (i % 3 == 0) g2.fillOval((int)x[i], (int)y[i], size, size);
+                    else            g2.fillRect((int)x[i], (int)y[i], size+2, size/2+3);
+                }
+                g2.dispose();
+            }
+        };
+        canvas.setOpaque(false);
+        overlay.add(canvas);
+        overlay.setVisible(true);
+        int[] frames = {0};
+        Timer t = new Timer(30, null);
+        t.addActionListener(ae -> {
+            for (int i = 0; i < NUM; i++) {
+                x[i] += vx[i]; y[i] += vy[i];
+                if (y[i] > h) { y[i] = -20; x[i] = rand.nextFloat() * w; }
+            }
+            canvas.repaint();
+            if (++frames[0] > 100) { t.stop(); overlay.dispose(); }
+        });
+        t.start();
+    }
+
+    /**
+     * /flip — retourne l'interface à 180° puis revient en place.
+     */
+    public void triggerFlip() {
+        int w = getWidth(), h = getHeight();
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        printAll(img.createGraphics());
+        JWindow overlay = new JWindow(this);
+        overlay.setBounds(getBounds());
+        double[] angle = {0};
+        int[]    state = {0}; // 0=aller 1=pause 2=retour
+        int[]    pause = {0};
+        JPanel canvas = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(20, 20, 20));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                double cx = getWidth() / 2.0, cy = getHeight() / 2.0;
+                g2.translate(cx, cy);
+                g2.rotate(Math.toRadians(angle[0]));
+                g2.translate(-cx, -cy);
+                g2.drawImage(img, 0, 0, null);
+                g2.dispose();
+            }
+        };
+        overlay.add(canvas);
+        overlay.setVisible(true);
+        Timer t = new Timer(12, null);
+        t.addActionListener(ae -> {
+            switch (state[0]) {
+                case 0: angle[0] += 7; if (angle[0] >= 180) { angle[0] = 180; state[0] = 1; } break;
+                case 1: if (++pause[0] >= 35) state[0] = 2; break;
+                case 2: angle[0] -= 7; if (angle[0] <= 0) { t.stop(); overlay.dispose(); return; } break;
+            }
+            canvas.repaint();
+        });
+        t.start();
+    }
+
+    /**
+     * /earthquake — la fenêtre tremble pendant 2 secondes.
+     */
+    public void triggerEarthquake() {
+        Point orig = getLocation();
+        int[] offsets = {0, 14, -14, 10, -10, 16, -16, 8, -8, 12, -12, 6, -6, 0};
+        int[] tick = {0};
+        Timer t = new Timer(30, null);
+        t.addActionListener(ae -> {
+            int dx = offsets[tick[0] % offsets.length];
+            int dy = offsets[(tick[0] + 3) % offsets.length] / 2;
+            setLocation(orig.x + dx, orig.y + dy);
+            if (++tick[0] >= 66) { t.stop(); setLocation(orig); }
+        });
+        t.start();
     }
 }

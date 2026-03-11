@@ -13,11 +13,15 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import main.java.com.ubo.tp.message.ihm.reactions.ReactionStore;
 
 /**
  * Panel d'affichage des messages.
@@ -103,6 +107,23 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         // ScrollPane pour la liste
         JScrollPane scrollPane = new JScrollPane(messageList);
         add(scrollPane, BorderLayout.CENTER);
+
+        // Réactions : repaint à chaque changement dans le ReactionStore
+        ReactionStore.getInstance().addListener(
+                () -> SwingUtilities.invokeLater(messageList::repaint));
+
+        // Clic droit sur un message → sélecteur de réaction
+        messageList.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int idx = messageList.locationToIndex(e.getPoint());
+                    if (idx >= 0) {
+                        messageList.setSelectedIndex(idx);
+                        showReactionPicker(messageListModel.getElementAt(idx), e.getComponent(), e.getX(), e.getY());
+                    }
+                }
+            }
+        });
 
         // Panel du bas : compteur + bouton supprimer
         JPanel bottomPanel = new JPanel(new BorderLayout());
@@ -371,65 +392,90 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
-     * Renderer personnalisé pour les messages.
-     * Affiche un badge coloré indiquant si le message est dans un canal (#) ou un DM (→@).
+     * Affiche le sélecteur de réaction (popup) pour un message donné.
+     */
+    private void showReactionPicker(Message msg, Component source, int x, int y) {
+        String[] emojis = {
+            "👍", "❤️", "😂", "😮",
+            "😢", "🔥", "🎉", "👀"
+        };
+        Color[] palette = {
+            new Color( 94, 234, 212), new Color(252, 165, 165),
+            new Color(254, 240, 138), new Color(134, 239, 172),
+            new Color(147, 197, 253), new Color(253, 186,  74),
+            new Color(216, 180, 254), new Color(186, 230, 253)
+        };
+        JPopupMenu popup = new JPopupMenu();
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        row.setBackground(new Color(248, 250, 252));
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        for (int idx = 0; idx < emojis.length; idx++) {
+            final String emoji = emojis[idx];
+            Color bg = palette[idx % palette.length];
+            boolean reacted = currentUser != null &&
+                    ReactionStore.getInstance().hasReacted(msg.getUuid(), emoji, currentUser.getUuid());
+            // JLabel respecte setBackground sous Nimbus, contrairement à JButton
+            JLabel lbl = new JLabel(emoji, JLabel.CENTER);
+            lbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 22));
+            lbl.setBackground(reacted ? bg.darker() : bg);
+            lbl.setOpaque(true);
+            lbl.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(bg.darker(), 2, true),
+                    BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+            lbl.setToolTipText(emoji);
+            lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            lbl.addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent me) {
+                    if (currentUser != null)
+                        ReactionStore.getInstance().toggle(msg.getUuid(), emoji, currentUser.getUuid());
+                    popup.setVisible(false);
+                }
+                @Override public void mouseEntered(MouseEvent me) {
+                    lbl.setBackground(bg.darker());
+                }
+                @Override public void mouseExited(MouseEvent me) {
+                    lbl.setBackground(bg);
+                }
+            });
+            row.add(lbl);
+        }
+        popup.add(row);
+        popup.show(source, x, y);
+    }
+
+    /**
+     * Renderer de style "bulle de conversation" (Messenger / Discord).
+     *
+     * – Messages du user connecté : bulle bleue alignée à DROITE
+     * – DM reçus               : bulle colorée alignée à GAUCHE
+     * – Messages de canal      : chaque auteur a sa couleur (à GAUCHE),
+     *                              sauf le user connecté (à DROITE en bleu).
      */
     private class MessageListCellRenderer extends JPanel implements ListCellRenderer<Message> {
 
-        // Couleurs des badges et stripes
-        private  final Color COLOR_CHANNEL     = new Color(109, 40, 217);
-        private  final Color COLOR_CHANNEL_BG  = new Color(237, 233, 254);
-        private  final Color COLOR_DM          = new Color(5, 150, 105);
-        private  final Color COLOR_DM_BG       = new Color(209, 250, 229);
+        // Palette de couleurs pour distinguer les auteurs dans un canal
+        private final Color[] PALETTE = {
+            new Color(16, 185, 129),  // émeraude
+            new Color(245, 158, 11),  // ambre
+            new Color(239,  68,  68), // rouge vif
+            new Color(168,  85, 247), // violet
+            new Color(236,  72, 153), // rose
+            new Color( 20, 184, 166), // teal
+            new Color(249, 115,  22), // orange
+            new Color( 99, 102, 241), // indigo
+        };
 
-        private JLabel authorLabel;
-        private JLabel destinationBadge;
-        private JTextArea contentArea;
-        private JLabel dateLabel;
-        private JPanel topPanel;
+        // Bleu pour les messages de l'utilisateur connecté
+        private final Color BLUE_ME = new Color(37, 99, 235);
 
         public MessageListCellRenderer() {
-            setLayout(new BorderLayout(0, 2));
             setOpaque(true);
+        }
 
-            // Auteur
-            authorLabel = new JLabel();
-            authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD, 12f));
-            authorLabel.setOpaque(false);
-
-            // Badge destination (canal ou DM)
-            destinationBadge = new JLabel();
-            destinationBadge.setFont(new Font("SansSerif", Font.BOLD, 10));
-            destinationBadge.setOpaque(true);
-            destinationBadge.setBorder(BorderFactory.createEmptyBorder(1, 6, 1, 6));
-
-            // Date
-            dateLabel = new JLabel();
-            dateLabel.setFont(dateLabel.getFont().deriveFont(Font.ITALIC, 10f));
-            dateLabel.setOpaque(false);
-
-            // Panel droit : badge + date côte à côte
-            JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-            rightPanel.setOpaque(false);
-            rightPanel.add(destinationBadge);
-            rightPanel.add(dateLabel);
-
-            // Panel du haut : auteur à gauche, badge+date à droite
-            topPanel = new JPanel(new BorderLayout());
-            topPanel.setOpaque(false);
-            topPanel.add(authorLabel, BorderLayout.WEST);
-            topPanel.add(rightPanel, BorderLayout.EAST);
-
-            // Contenu — DOIT rester non-opaque dans un JList renderer
-            contentArea = new JTextArea();
-            contentArea.setEditable(false);
-            contentArea.setLineWrap(true);
-            contentArea.setWrapStyleWord(true);
-            contentArea.setOpaque(false);
-            contentArea.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-
-            add(topPanel, BorderLayout.NORTH);
-            add(contentArea, BorderLayout.CENTER);
+        /** Détermine la couleur de bulle d'un auteur via le hash de son tag. */
+        private Color colorFor(User sender) {
+            int idx = Math.abs(sender.getUserTag().hashCode()) % PALETTE.length;
+            return PALETTE[idx];
         }
 
         @Override
@@ -437,72 +483,140 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
                                                       int index, boolean isSelected, boolean cellHasFocus) {
             if (message == null) return this;
 
-            // ── Auteur ────────────────────────────────────────────────────
-            User sender = message.getSender();
-            authorLabel.setText("👤 @" + sender.getUserTag() + " (" + sender.getName() + ")");
+            removeAll();
+            setLayout(new BorderLayout());
+            setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+            setBackground(isSelected ? new Color(219, 234, 254) : list.getBackground());
 
-            // ── Contenu ───────────────────────────────────────────────────
-            contentArea.setText(message.getText());
+            User currentUser = SessionManager.getInstance().getCurrentUser();
+            boolean isMe = currentUser != null
+                    && message.getSender().getUuid().equals(currentUser.getUuid());
 
-            // ── Date ──────────────────────────────────────────────────────
-            dateLabel.setText(dateFormat.format(new Date(message.getEmissionDate())));
+            Color bubbleColor = isMe ? BLUE_ME : colorFor(message.getSender());
 
-            // ── Déterminer si canal ou DM ─────────────────────────────────
-            UUID recipientUuid = message.getRecipient();
-            String channelName = null;
-            String recipientTag = null;
+            // ── Bulle ────────────────────────────────────────────────
+            BubblePanel bubble = new BubblePanel(bubbleColor, 14);
+            bubble.setLayout(new BorderLayout(0, 2));
+            bubble.setBorder(BorderFactory.createEmptyBorder(7, 11, 7, 11));
 
-            if (dataManager != null) {
-                for (Channel ch : dataManager.getChannels()) {
-                    if (ch.getUuid().equals(recipientUuid)) {
-                        channelName = ch.getName();
-                        break;
-                    }
-                }
-                if (channelName == null) {
-                    for (User u : dataManager.getUsers()) {
-                        if (u.getUuid().equals(recipientUuid)) {
-                            recipientTag = u.getUserTag();
-                            break;
-                        }
-                    }
-                }
+            // Auteur uniquement pour les messages des autres
+            if (!isMe) {
+                JLabel author = new JLabel("@" + message.getSender().getUserTag());
+                author.setFont(new Font("SansSerif", Font.BOLD, 11));
+                author.setForeground(new Color(255, 255, 255, 210));
+                bubble.add(author, BorderLayout.NORTH);
             }
 
-            // ── Badge et stripe gauche selon le type ──────────────────────
-            Color stripeColor;
-            if (channelName != null) {
-                destinationBadge.setText("# " + channelName);
-                destinationBadge.setBackground(isSelected ? COLOR_CHANNEL : COLOR_CHANNEL_BG);
-                destinationBadge.setForeground(isSelected ? Color.WHITE : COLOR_CHANNEL);
-                stripeColor = COLOR_CHANNEL;
-            } else if (recipientTag != null) {
-                destinationBadge.setText("→ @" + recipientTag);
-                destinationBadge.setBackground(isSelected ? COLOR_DM : COLOR_DM_BG);
-                destinationBadge.setForeground(isSelected ? Color.WHITE : COLOR_DM);
-                stripeColor = COLOR_DM;
+            // Texte du message
+            JTextArea textArea = new JTextArea(message.getText());
+            textArea.setEditable(false);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            textArea.setOpaque(true);
+            textArea.setBackground(bubbleColor);
+            textArea.setForeground(Color.WHITE);
+            textArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            textArea.setBorder(null);
+            bubble.add(textArea, BorderLayout.CENTER);
+
+            // Pied de bulle : badge destination + horodatage
+            JPanel footer = new JPanel(new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT, 4, 0));
+            footer.setOpaque(false);
+
+            String dest = resolveDestination(message);
+            if (dest != null) {
+                JLabel badge = new JLabel(dest);
+                badge.setFont(new Font("SansSerif", Font.BOLD, 9));
+                badge.setForeground(new Color(255, 255, 255, 170));
+                footer.add(badge);
+            }
+
+            JLabel dateLabel = new JLabel(dateFormat.format(new Date(message.getEmissionDate())));
+            dateLabel.setFont(new Font("SansSerif", Font.ITALIC, 10));
+            dateLabel.setForeground(new Color(255, 255, 255, 170));
+            footer.add(dateLabel);
+
+            bubble.add(footer, BorderLayout.SOUTH);
+
+            // ── Largeur max de la bulle (72 % du panneau) ─────────────────
+            int listW = list.getWidth();
+            int maxW  = listW > 80 ? (int) (listW * 0.72) : 400;
+            bubble.setMaximumSize(new Dimension(maxW, Short.MAX_VALUE));
+            // Force le JTextArea à calculer sa hauteur sur la vraie largeur
+            textArea.setSize(maxW - 22, Short.MAX_VALUE);
+
+            // ── Rangée avec alignement gauche ou droite ───────────────────
+            JPanel row = new JPanel();
+            row.setOpaque(false);
+            row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+            if (isMe) {
+                row.add(Box.createHorizontalGlue());
+                row.add(bubble);
             } else {
-                destinationBadge.setText("");
-                destinationBadge.setBackground(Color.LIGHT_GRAY);
-                stripeColor = Color.LIGHT_GRAY;
+                row.add(bubble);
+                row.add(Box.createHorizontalGlue());
             }
+            add(row, BorderLayout.CENTER);
 
-            // Bordure : stripe colorée à gauche + séparateur bas + padding
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 4, 1, 0, stripeColor),
-                    BorderFactory.createEmptyBorder(5, 8, 5, 5)
-            ));
-
-            // ── Couleurs fond/texte selon sélection ───────────────────────
-            Color bg = isSelected ? list.getSelectionBackground() : list.getBackground();
-            Color fg = isSelected ? list.getSelectionForeground() : list.getForeground();
-
-            setBackground(bg);
-            authorLabel.setForeground(fg);
-            contentArea.setForeground(fg);
-            dateLabel.setForeground(isSelected ? fg : Color.GRAY);
-
+            // ── Badges de réactions sous la bulle ─────────────────────────
+            Map<String, Integer> reactions =
+                    ReactionStore.getInstance().getCountsFor(message.getUuid());
+            if (!reactions.isEmpty()) {
+                JPanel reactionRow = new JPanel(
+                        new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT, 3, 0));
+                reactionRow.setOpaque(false);
+                User cu = SessionManager.getInstance().getCurrentUser();
+                for (Map.Entry<String, Integer> re : reactions.entrySet()) {
+                    boolean mine = cu != null && ReactionStore.getInstance()
+                            .hasReacted(message.getUuid(), re.getKey(), cu.getUuid());
+                    JLabel badge = new JLabel(re.getKey() + " " + re.getValue());
+                    badge.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12));
+                    badge.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
+                            BorderFactory.createEmptyBorder(1, 5, 1, 5)));
+                    badge.setBackground(mine
+                            ? new Color(219, 234, 254)
+                            : new Color(243, 244, 246));
+                    badge.setOpaque(true);
+                    reactionRow.add(badge);
+                }
+                add(reactionRow, BorderLayout.SOUTH);
+            }
             return this;
+        }
+
+        /** Résout le destinataire du message en une chaîne lisible. */
+        private String resolveDestination(Message message) {
+            if (dataManager == null) return null;
+            UUID id = message.getRecipient();
+            for (Channel ch : dataManager.getChannels()) {
+                if (ch.getUuid().equals(id)) return "# " + ch.getName();
+            }
+            for (User u : dataManager.getUsers()) {
+                if (u.getUuid().equals(id)) return "→ @" + u.getUserTag();
+            }
+            return null;
+        }
+    }
+
+    /** Panneau avec fond en rectangle arrondi — utilisé pour les bulles de messages. */
+    private static class BubblePanel extends JPanel {
+        private final Color color;
+        private final int   radius;
+
+        BubblePanel(Color color, int radius) {
+            this.color  = color;
+            this.radius = radius;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            g2.dispose();
         }
     }
 }
