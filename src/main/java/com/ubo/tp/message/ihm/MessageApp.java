@@ -189,6 +189,7 @@ public class MessageApp {
 					System.out.println("[AUTH] Connexion réussie pour : " + tag);
 
 					SessionManager.getInstance().setCurrentUser(user);
+					mDataManager.sendUser(user); // persiste online=true sur le disque
 					mAuthView.onLoginSuccess(tag);
 					mMainView.showMainView(tag);
 
@@ -233,6 +234,18 @@ public class MessageApp {
 
 		System.out.println("[AUTH] Utilisateur créé avec succès : " + tag);
 		return true;
+	}
+
+	/**
+	 * Déconnecte l'utilisateur courant et persiste le statut hors ligne sur le disque.
+	 */
+	public void logoutUser() {
+		main.java.com.ubo.tp.message.datamodel.User user = SessionManager.getInstance().getCurrentUser();
+		if (user != null) {
+			user.setOnline(false);
+			mDataManager.sendUser(user); // persiste online=false sur le disque
+		}
+		SessionManager.getInstance().logout();
 	}
 
 	// get mdatamanger

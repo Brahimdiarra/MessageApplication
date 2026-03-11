@@ -2,7 +2,6 @@ package main.java.com.ubo.tp.message.ihm;
 
 import javax.swing.*;
 import java.awt.*;
-import main.java.com.ubo.tp.message.core.SessionManager;
 
 /**
  * Vue d'authentification (login et inscription).
@@ -256,9 +255,8 @@ public class AuthenticationView extends JFrame {
     public void onLogout(String username) {
         System.out.println("[AUTH_VIEW] Déconnexion de : " + username);
 
-        // Fermer la session utilisateur
-        // Cela marque l'utilisateur comme hors ligne et supprime la référence
-        SessionManager.getInstance().logout();
+        // Fermer la session utilisateur (persiste online=false sur le disque)
+        messageApp.logoutUser();
 
         // Fermer la vue principale
         if (mainView != null) {
