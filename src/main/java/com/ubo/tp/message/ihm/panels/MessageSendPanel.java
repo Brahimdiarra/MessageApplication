@@ -13,13 +13,18 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
 
 /**
  * Panel de saisie et d'envoi de messages.
@@ -35,6 +40,10 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
     private DataManager dataManager;
     private JLabel charCountLabel;
     private JButton emojiPickerBtn;
+    private JButton imageAttachBtn;
+    private JLabel imagePreviewLabel;
+    private JButton imageClearBtn;
+    private String pendingImageData = null;
     private JPopupMenu autocompletePopup = new JPopupMenu();
     private int autocompleteColonPos = -1;
 
@@ -137,10 +146,45 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         charCountLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
         charCountLabel.setForeground(Color.GRAY);
 
+        // Panel de prévisualisation de l'image sélectionnée
+        JPanel imagePreviewPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        imagePreviewPanel.setBackground(new Color(240, 245, 255));
+        imagePreviewPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        imagePreviewPanel.setVisible(false);
+
+        imagePreviewLabel = new JLabel();
+        imagePreviewLabel.setBorder(BorderFactory.createLineBorder(new Color(147, 197, 253), 1));
+        imagePreviewPanel.add(imagePreviewLabel);
+
+        imageClearBtn = new JButton("✕");
+        imageClearBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
+        imageClearBtn.setForeground(new Color(220, 38, 38));
+        imageClearBtn.setBorderPainted(false);
+        imageClearBtn.setFocusPainted(false);
+        imageClearBtn.setOpaque(false);
+        imageClearBtn.setToolTipText("Retirer l'image");
+        imageClearBtn.addActionListener(e -> {
+            pendingImageData = null;
+            imagePreviewLabel.setIcon(null);
+            imagePreviewPanel.setVisible(false);
+            revalidate();
+        });
+        imagePreviewPanel.add(imageClearBtn);
+
         // Panel du bas : bouton envoyer (bleu accent)
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
         bottomPanel.setBackground(new Color(248, 250, 252));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+
+        imageAttachBtn = new JButton("\uD83D\uDDBC");
+        imageAttachBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        imageAttachBtn.setMargin(new java.awt.Insets(2, 4, 2, 4));
+        imageAttachBtn.setToolTipText("Joindre une image (PNG, JPG, GIF)");
+        imageAttachBtn.setBorderPainted(false);
+        imageAttachBtn.setFocusPainted(false);
+        imageAttachBtn.addActionListener(e -> attachImage(imagePreviewPanel));
+        bottomPanel.add(imageAttachBtn);
+
         emojiPickerBtn = new JButton("\uD83D\uDE0A");
         emojiPickerBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
         emojiPickerBtn.setMargin(new java.awt.Insets(2, 4, 2, 4));
@@ -166,9 +210,14 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         });
         bottomPanel.add(sendButton);
 
+        // Panel central regroupant zone de texte + prévisualisation image
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        centerPanel.add(imagePreviewPanel, BorderLayout.SOUTH);
+
         // Ajout des panels
         add(topPanel, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
 
         // Raccourci clavier : Ctrl+Enter pour envoyer
@@ -235,6 +284,51 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
+     * Ouvre un sélecteur de fichier image, encode en base64 et affiche la prévisualisation.
+     */
+    private void attachImage(JPanel imagePreviewPanel) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choisir une image");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Images (PNG, JPG, GIF)", "png", "jpg", "jpeg", "gif"));
+        chooser.setAcceptAllFileFilterUsed(false);
+
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+        File file = chooser.getSelectedFile();
+        try {
+            BufferedImage original = ImageIO.read(file);
+            if (original == null) {
+                JOptionPane.showMessageDialog(this, "Impossible de lire l'image.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Redimensionner à 300px de large max pour limiter la taille du fichier
+            int targetW = Math.min(original.getWidth(), 300);
+            int targetH = (int) ((double) original.getHeight() * targetW / original.getWidth());
+            BufferedImage scaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
+            scaled.getGraphics().drawImage(original.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH), 0, 0, null);
+
+            // Encoder en base64
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(scaled, "png", baos);
+            pendingImageData = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+            // Afficher la prévisualisation (80px de haut)
+            int prevH = 80;
+            int prevW = (int) ((double) targetW * prevH / targetH);
+            ImageIcon icon = new ImageIcon(scaled.getScaledInstance(prevW, prevH, Image.SCALE_SMOOTH));
+            imagePreviewLabel.setIcon(icon);
+            imagePreviewPanel.setVisible(true);
+            revalidate();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erreur lors du chargement de l'image : " + ex.getMessage(),
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
      * Envoie le message au destinataire sélectionné.
      */
     private void sendMessage() {
@@ -244,7 +338,8 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         // Remplacer les raccourcis :emoji: par le vrai emoji
         messageText = applyEmojiShortcuts(messageText);
 
-        if (messageText.isEmpty()) {
+        // Un message doit avoir du texte ou une image
+        if (messageText.isEmpty() && pendingImageData == null) {
             JOptionPane.showMessageDialog(
                     this,
                     "Le message ne peut pas être vide !",
@@ -253,7 +348,7 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
             return;
         }
 
-        // Vérification de la limite de 200 caractères (MSG-008)
+        // Vérification de la limite de 200 caractères (MSG-008) uniquement pour le texte
         if (messageText.length() > 200) {
             JOptionPane.showMessageDialog(
                     this,
@@ -299,16 +394,23 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         }
 
         try {
-            // Créer le message
-            Message message = new Message(currentUser, recipientUuid, messageText);
+            // Créer le message (avec image si présente)
+            Message message = new Message(currentUser, recipientUuid, messageText, pendingImageData);
 
             // Envoyer via le DataManager
             dataManager.sendMessage(message);
 
-            System.out.println("[SEND] Message envoyé à " + recipientName + " : " + messageText);
+            System.out.println("[SEND] Message envoyé à " + recipientName + " : " + messageText
+                    + (pendingImageData != null ? " [+ image]" : ""));
 
-            // Effacer le champ de texte
+            // Effacer le champ de texte et l'image
             messageTextArea.setText("");
+            pendingImageData = null;
+            imagePreviewLabel.setIcon(null);
+            // Cacher le panel de prévisualisation (on retrouve le parent via le composant)
+            Container parent = imagePreviewLabel.getParent();
+            if (parent != null) parent.setVisible(false);
+            revalidate();
 
             // Message de confirmation
             JOptionPane.showMessageDialog(

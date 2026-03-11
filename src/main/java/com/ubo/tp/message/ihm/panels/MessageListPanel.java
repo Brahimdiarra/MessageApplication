@@ -12,15 +12,19 @@ import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.text.SimpleDateFormat;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import main.java.com.ubo.tp.message.ihm.reactions.ReactionStore;
 
 /**
@@ -444,6 +448,27 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
+     * Décode une image base64 et la retourne redimensionnée à maxWidth pixels de large.
+     *
+     * @param base64Data données image en base64
+     * @param maxWidth   largeur maximale en pixels
+     * @return ImageIcon prête à l'affichage, ou null en cas d'erreur
+     */
+    private ImageIcon decodeImage(String base64Data, int maxWidth) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64Data);
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (img == null) return null;
+            int w = Math.min(img.getWidth(), maxWidth);
+            int h = (int) ((double) img.getHeight() * w / img.getWidth());
+            Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaled);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Renderer de style "bulle de conversation" (Messenger / Discord).
      *
      * – Messages du user connecté : bulle bleue alignée à DROITE
@@ -507,17 +532,38 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
                 bubble.add(author, BorderLayout.NORTH);
             }
 
-            // Texte du message
-            JTextArea textArea = new JTextArea(message.getText());
-            textArea.setEditable(false);
-            textArea.setLineWrap(true);
-            textArea.setWrapStyleWord(true);
-            textArea.setOpaque(true);
-            textArea.setBackground(bubbleColor);
-            textArea.setForeground(Color.WHITE);
-            textArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
-            textArea.setBorder(null);
-            bubble.add(textArea, BorderLayout.CENTER);
+            // Contenu de la bulle (texte + image éventuelle)
+            JPanel contentPanel = new JPanel();
+            contentPanel.setOpaque(false);
+            contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+
+            if (!message.getText().isEmpty()) {
+                JTextArea textArea = new JTextArea(message.getText());
+                textArea.setEditable(false);
+                textArea.setLineWrap(true);
+                textArea.setWrapStyleWord(true);
+                textArea.setOpaque(true);
+                textArea.setBackground(bubbleColor);
+                textArea.setForeground(Color.WHITE);
+                textArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                textArea.setBorder(null);
+                // Force le JTextArea à calculer sa hauteur sur la vraie largeur
+                int maxW2 = list.getWidth() > 80 ? (int) (list.getWidth() * 0.72) - 22 : 378;
+                textArea.setSize(maxW2, Short.MAX_VALUE);
+                contentPanel.add(textArea);
+            }
+
+            if (message.hasImage()) {
+                ImageIcon imageIcon = decodeImage(message.getImageData(), 240);
+                if (imageIcon != null) {
+                    JLabel imgLabel = new JLabel(imageIcon);
+                    imgLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+                    imgLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    contentPanel.add(imgLabel);
+                }
+            }
+
+            bubble.add(contentPanel, BorderLayout.CENTER);
 
             // Pied de bulle : badge destination + horodatage
             JPanel footer = new JPanel(new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT, 4, 0));
@@ -542,8 +588,6 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
             int listW = list.getWidth();
             int maxW  = listW > 80 ? (int) (listW * 0.72) : 400;
             bubble.setMaximumSize(new Dimension(maxW, Short.MAX_VALUE));
-            // Force le JTextArea à calculer sa hauteur sur la vraie largeur
-            textArea.setSize(maxW - 22, Short.MAX_VALUE);
 
             // ── Rangée avec alignement gauche ou droite ───────────────────
             JPanel row = new JPanel();

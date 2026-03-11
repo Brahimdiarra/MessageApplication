@@ -62,6 +62,11 @@ public class DataFilesManager {
 	protected static final String PROPERTY_KEY_MESSAGE_TEXT = "Text";
 
 	/**
+	 * Clé du fichier de propriété pour l'image encodée en base64
+	 */
+	protected static final String PROPERTY_KEY_MESSAGE_IMAGE = "ImageData";
+
+	/**
 	 * Clé du fichier de propriété pour l'attribut Creator
 	 */
 	protected static final String PROPERTY_KEY_CHANNEL_CREATOR = "Creator";
@@ -195,11 +200,12 @@ public class DataFilesManager {
 					Constants.UNKNONWN_USER_UUID.toString());
 			String emissionDateStr = properties.getProperty(PROPERTY_KEY_MESSAGE_DATE, "0");
 			String text = properties.getProperty(PROPERTY_KEY_MESSAGE_TEXT, "NoText");
+			String imageData = properties.getProperty(PROPERTY_KEY_MESSAGE_IMAGE, null);
 
 			User sender = getUserFromUuid(senderUuid, userMap);
 			long emissionDate = Long.valueOf(emissionDateStr);
 
-			message = new Message(UUID.fromString(uuid), sender, UUID.fromString(recipientUuid), emissionDate, text);
+			message = new Message(UUID.fromString(uuid), sender, UUID.fromString(recipientUuid), emissionDate, text, imageData);
 		}
 
 		return message;
@@ -221,6 +227,9 @@ public class DataFilesManager {
 		properties.setProperty(PROPERTY_KEY_MESSAGE_RECIPIENT, message.getRecipient().toString());
 		properties.setProperty(PROPERTY_KEY_MESSAGE_DATE, String.valueOf(message.getEmissionDate()));
 		properties.setProperty(PROPERTY_KEY_MESSAGE_TEXT, message.getText());
+		if (message.hasImage()) {
+			properties.setProperty(PROPERTY_KEY_MESSAGE_IMAGE, message.getImageData());
+		}
 
 		PropertiesManager.writeProperties(properties, destFileName);
 	}
