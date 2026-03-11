@@ -14,6 +14,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
     private final List<Channel> allChannels = new ArrayList<>();
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
+    private final Map<UUID, String> lastMessages = new HashMap<>();
     private UUID currentlyViewingUuid = null;
 
     // ── Dark mode ─────────────────────────────────────────────────────────
@@ -137,7 +139,7 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         channelList = new JList<>(channelListModel);
         channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         channelList.setCellRenderer(new ChannelListCellRenderer());
-        channelList.setFixedCellHeight(40);
+        channelList.setFixedCellHeight(52);
         channelList.setBackground(Color.WHITE);
         add(new JScrollPane(channelList), BorderLayout.CENTER);
 
@@ -234,11 +236,22 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
             if (currentUser == null) return;
-            if (addedMessage.getSender().getUuid().equals(currentUser.getUuid())) return;
             UUID recipient = addedMessage.getRecipient();
-            boolean isChannel = allChannels.stream().anyMatch(c -> c.getUuid().equals(recipient));
-            if (!isChannel || recipient.equals(currentlyViewingUuid)) return;
-            unreadCounts.merge(recipient, 1, Integer::sum);
+            Channel ch = allChannels.stream().filter(c -> c.getUuid().equals(recipient)).findFirst().orElse(null);
+            if (ch == null || !ch.isMember(currentUser)) return;
+
+            // Mettre à jour l'aperçu du dernier message
+            String text = addedMessage.getText();
+            if (text.isEmpty() && addedMessage.hasImage()) text = "📷 Image";
+            if (text.length() > 30) text = text.substring(0, 27) + "...";
+            boolean isMe = addedMessage.getSender().getUuid().equals(currentUser.getUuid());
+            String prefix = isMe ? "Vous: " : "@" + addedMessage.getSender().getUserTag() + ": ";
+            lastMessages.put(recipient, prefix + text);
+
+            // Incrémenter le badge non-lu uniquement si je ne suis pas l'expéditeur et que ce n'est pas la conv active
+            if (!isMe && !recipient.equals(currentlyViewingUuid)) {
+                unreadCounts.merge(recipient, 1, Integer::sum);
+            }
             channelList.repaint();
         });
     }
@@ -247,6 +260,32 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         currentlyViewingUuid = channelUuid;
         unreadCounts.remove(channelUuid);
         channelList.repaint();
+    }
+
+    /**
+     * Charge les aperçus du dernier message pour chaque canal accessible à l'utilisateur connecté.
+     * À appeler après le login une fois que la base est chargée.
+     */
+    public void refreshLastMessages(DataManager dm) {
+        if (dm == null) return;
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+        lastMessages.clear();
+        List<Message> sorted = new ArrayList<>(dm.getMessages());
+        sorted.sort(Comparator.comparingLong(Message::getEmissionDate));
+        for (Message m : sorted) {
+            UUID recipient = m.getRecipient();
+            boolean isChannel = allChannels.stream().anyMatch(c -> c.getUuid().equals(recipient));
+            if (!isChannel) continue;
+            Channel ch = allChannels.stream().filter(c -> c.getUuid().equals(recipient)).findFirst().orElse(null);
+            if (ch == null || !ch.isMember(currentUser)) continue;
+            String text = m.getText();
+            if (text.isEmpty() && m.hasImage()) text = "📷 Image";
+            if (text.length() > 30) text = text.substring(0, 27) + "...";
+            String prefix = m.getSender().getUuid().equals(currentUser.getUuid()) ? "Vous: " : "@" + m.getSender().getUserTag() + ": ";
+            lastMessages.put(recipient, prefix + text);
+        }
+        SwingUtilities.invokeLater(channelList::repaint);
     }
 
     @Override public void notifyMessageDeleted(Message m)  { }
@@ -285,11 +324,22 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
 
                 String tooltip = "Créateur : " + channel.getCreator().getName()
                         + (channel.isPrivate() ? " | Canal privé (" + channel.getUsers().size() + " membres)" : " | Canal public");
+                JPanel textPanel = new JPanel();
+                textPanel.setOpaque(false);
+                textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
                 JLabel nameLabel = new JLabel(channel.getName());
                 nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 13));
                 nameLabel.setForeground(isSelected ? Color.WHITE : (unread > 0 ? DARK_TEXT_ACT : DARK_TEXT));
                 nameLabel.setToolTipText(tooltip);
-                cell.add(nameLabel, BorderLayout.CENTER);
+                textPanel.add(nameLabel);
+                String preview = lastMessages.get(channel.getUuid());
+                if (preview != null) {
+                    JLabel previewLabel = new JLabel(preview);
+                    previewLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                    previewLabel.setForeground(isSelected ? new Color(220, 220, 255) : DARK_TEXT);
+                    textPanel.add(previewLabel);
+                }
+                cell.add(textPanel, BorderLayout.CENTER);
 
                 if (unread > 0) {
                     JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
@@ -305,11 +355,22 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
                 cell.setBackground(isSelected ? list.getSelectionBackground()
                         : (index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252)));
                 cell.setOpaque(true);
+                JPanel lightTextPanel = new JPanel();
+                lightTextPanel.setOpaque(false);
+                lightTextPanel.setLayout(new BoxLayout(lightTextPanel, BoxLayout.Y_AXIS));
                 JLabel nameLabel = new JLabel("  #  " + channel.getName());
                 nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
                 nameLabel.setForeground(isSelected ? list.getSelectionForeground() : new Color(109, 40, 217));
                 nameLabel.setToolTipText("Créateur : " + channel.getCreator().getName());
-                cell.add(nameLabel, BorderLayout.CENTER);
+                lightTextPanel.add(nameLabel);
+                String lightPreview = lastMessages.get(channel.getUuid());
+                if (lightPreview != null) {
+                    JLabel previewLabel = new JLabel("  " + lightPreview);
+                    previewLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                    previewLabel.setForeground(Color.GRAY);
+                    lightTextPanel.add(previewLabel);
+                }
+                cell.add(lightTextPanel, BorderLayout.CENTER);
                 if (unread > 0) {
                     JLabel badge = new JLabel(unread > 99 ? "99+" : String.valueOf(unread));
                     badge.setFont(new Font("SansSerif", Font.BOLD, 10));

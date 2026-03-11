@@ -48,8 +48,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private final List<Message> currentMessages = new ArrayList<>();
 
-    /** Type de filtre actif : "all", "channel", "user". */
-    private String currentFilterType = "all";
+    /** Type de filtre actif : "none", "channel", "user". */
+    private String currentFilterType = "none";
 
     /** UUID du canal ou utilisateur filtré (null si filterType == "all"). */
     private UUID currentFilterUuid = null;
@@ -312,17 +312,13 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
     }
 
     /**
-     * Affiche tous les messages sans filtre.
+     * Réinitialise l'affichage (aucune conversation sélectionnée).
      */
     public void showAllMessages() {
-        currentFilterType = "all";
+        currentFilterType = "none";
         currentFilterUuid = null;
         currentMessages.clear();
-
-        if (messageApp != null && messageApp.getmDataManager() != null) {
-            currentMessages.addAll(messageApp.getmDataManager().getMessages());
-        }
-        applySearch();
+        messageListModel.clear();
     }
 
     @Override
@@ -330,8 +326,8 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(() -> {
             // Vérifier si le message correspond au filtre actif
             boolean matchesFilter = false;
-            if ("all".equals(currentFilterType)) {
-                matchesFilter = true;
+            if ("none".equals(currentFilterType)) {
+                return; // Aucune conversation sélectionnée, ne rien afficher
             } else if ("channel".equals(currentFilterType) && currentFilterUuid != null) {
                 matchesFilter = addedMessage.getRecipient().equals(currentFilterUuid);
             } else if ("user".equals(currentFilterType) && currentFilterUuid != null) {

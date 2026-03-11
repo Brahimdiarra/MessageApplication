@@ -139,6 +139,9 @@ public class MessageAppMainView extends JFrame {
             if (messageApp != null && messageApp.mDataManager != null) {
                 IDatabase database = messageApp.mDataManager.getDatabase();
                 registerObservers(database);
+                // Charger les aperçus de derniers messages dans les sidebars
+                userListPanel.refreshLastMessages(messageApp.mDataManager);
+                channelListPanel.refreshLastMessages(messageApp.mDataManager);
             }
         } catch (Exception e) {
             System.err.println("[ERREUR] Impossible d'enregistrer les observateurs : " + e.getMessage());

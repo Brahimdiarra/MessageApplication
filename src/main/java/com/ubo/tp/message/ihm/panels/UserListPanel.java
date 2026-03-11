@@ -1,5 +1,6 @@
 package main.java.com.ubo.tp.message.ihm.panels;
 
+import main.java.com.ubo.tp.message.core.DataManager;
 import main.java.com.ubo.tp.message.core.SessionManager;
 import main.java.com.ubo.tp.message.core.database.IDatabaseObserver;
 import main.java.com.ubo.tp.message.datamodel.Channel;
@@ -11,6 +12,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
 
     private final List<User> allUsers = new ArrayList<>();
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
+    private final Map<UUID, String> lastMessages = new HashMap<>();
     private UUID currentlyViewingUuid = null;
 
     // ── Dark mode ─────────────────────────────────────────────────────────
@@ -174,11 +177,24 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         SwingUtilities.invokeLater(() -> {
             User currentUser = SessionManager.getInstance().getCurrentUser();
             if (currentUser == null) return;
-            if (m.getSender().getUuid().equals(currentUser.getUuid())) return;
-            if (!m.getRecipient().equals(currentUser.getUuid())) return;
-            UUID senderUuid = m.getSender().getUuid();
-            if (senderUuid.equals(currentlyViewingUuid)) return;
-            unreadCounts.merge(senderUuid, 1, Integer::sum);
+            UUID myUuid = currentUser.getUuid();
+            UUID sender = m.getSender().getUuid();
+            UUID recipient = m.getRecipient();
+
+            if (sender.equals(myUuid)) {
+                // Message que j'envoie à un utilisateur
+                boolean recipientIsUser = allUsers.stream().anyMatch(u -> u.getUuid().equals(recipient));
+                if (!recipientIsUser) return;
+                lastMessages.put(recipient, buildPreview(m, "Vous: "));
+            } else if (recipient.equals(myUuid)) {
+                // Message reçu d'un autre utilisateur
+                lastMessages.put(sender, buildPreview(m, ""));
+                if (!sender.equals(currentlyViewingUuid)) {
+                    unreadCounts.merge(sender, 1, Integer::sum);
+                }
+            } else {
+                return; // pas mon message DM
+            }
             userList.repaint();
         });
     }
@@ -187,6 +203,39 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         currentlyViewingUuid = userUuid;
         unreadCounts.remove(userUuid);
         userList.repaint();
+    }
+
+    /**
+     * Charge les aperçus du dernier message pour chaque conversation DM depuis la base.
+     * À appeler après le login une fois que la base est chargée.
+     */
+    public void refreshLastMessages(DataManager dm) {
+        if (dm == null) return;
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+        UUID myUuid = currentUser.getUuid();
+        lastMessages.clear();
+        List<Message> sorted = new ArrayList<>(dm.getMessages());
+        sorted.sort(Comparator.comparingLong(Message::getEmissionDate));
+        for (Message m : sorted) {
+            UUID sender = m.getSender().getUuid();
+            UUID recipient = m.getRecipient();
+            if (sender.equals(myUuid)) {
+                boolean recipientIsUser = allUsers.stream().anyMatch(u -> u.getUuid().equals(recipient));
+                if (!recipientIsUser) continue;
+                lastMessages.put(recipient, buildPreview(m, "Vous: "));
+            } else if (recipient.equals(myUuid)) {
+                lastMessages.put(sender, buildPreview(m, ""));
+            }
+        }
+        SwingUtilities.invokeLater(userList::repaint);
+    }
+
+    private String buildPreview(Message m, String prefix) {
+        String text = m.getText();
+        if (text.isEmpty() && m.hasImage()) text = "📷 Image";
+        if (text.length() > 30) text = text.substring(0, 27) + "...";
+        return prefix + text;
     }
 
     @Override public void notifyMessageDeleted(Message m)  { }
@@ -248,9 +297,10 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
                 JLabel nameLabel = new JLabel("@" + user.getUserTag());
                 nameLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 13));
                 nameLabel.setForeground(isSelected ? Color.WHITE : (user.isOnline() ? DARK_TEXT_ACT : DARK_TEXT));
-                JLabel subLabel = new JLabel(user.getName());
-                subLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
-                subLabel.setForeground(isSelected ? new Color(220, 220, 255) : DARK_TEXT);
+                String preview = lastMessages.getOrDefault(user.getUuid(), user.getName());
+                JLabel subLabel = new JLabel(preview);
+                subLabel.setFont(new Font("SansSerif", unread > 0 ? Font.BOLD : Font.PLAIN, 10));
+                subLabel.setForeground(isSelected ? new Color(220, 220, 255) : (unread > 0 ? DARK_TEXT_ACT : DARK_TEXT));
                 textPanel.add(nameLabel);
                 textPanel.add(subLabel);
 
