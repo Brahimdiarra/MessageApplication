@@ -37,6 +37,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
     private final Map<UUID, String> lastMessages = new HashMap<>();
     private UUID currentlyViewingUuid = null;
+    /** Horodatage de connexion — seuls les messages plus récents créent un badge. */
+    private long loginTime = System.currentTimeMillis();
 
     // ── Dark mode ─────────────────────────────────────────────────────────
     private boolean darkMode = false;
@@ -240,11 +242,15 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
             Channel ch = allChannels.stream().filter(c -> c.getUuid().equals(recipient)).findFirst().orElse(null);
             if (ch == null || !ch.isMember(currentUser)) return;
 
+            boolean isNewMessage = addedMessage.getEmissionDate() >= loginTime;
+            if (!isNewMessage) return; // message historique, ignorer pour les badges
+
+            boolean isMe = addedMessage.getSender().getUuid().equals(currentUser.getUuid());
+
             // Mettre à jour l'aperçu du dernier message
             String text = addedMessage.getText();
             if (text.isEmpty() && addedMessage.hasImage()) text = "📷 Image";
             if (text.length() > 30) text = text.substring(0, 27) + "...";
-            boolean isMe = addedMessage.getSender().getUuid().equals(currentUser.getUuid());
             String prefix = isMe ? "Vous: " : "@" + addedMessage.getSender().getUserTag() + ": ";
             lastMessages.put(recipient, prefix + text);
 
@@ -270,7 +276,10 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         if (dm == null) return;
         User currentUser = SessionManager.getInstance().getCurrentUser();
         if (currentUser == null) return;
+        loginTime = System.currentTimeMillis(); // réinitialise à chaque connexion
         lastMessages.clear();
+        unreadCounts.clear();
+        currentlyViewingUuid = null;
         List<Message> sorted = new ArrayList<>(dm.getMessages());
         sorted.sort(Comparator.comparingLong(Message::getEmissionDate));
         for (Message m : sorted) {

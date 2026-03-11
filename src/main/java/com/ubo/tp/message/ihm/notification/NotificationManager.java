@@ -8,6 +8,8 @@ import main.java.com.ubo.tp.message.datamodel.User;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Gestionnaire de notifications (MSG-010).
@@ -23,8 +25,12 @@ public class NotificationManager implements IDatabaseObserver {
     /** Fenêtre parente (pour positionner les toasts). */
     private final Window parentWindow;
 
-    public NotificationManager(Window parentWindow) {
+    /** Fournisseur de l'UUID de la conversation actuellement ouverte (peut être null). */
+    private final Supplier<UUID> currentConversationSupplier;
+
+    public NotificationManager(Window parentWindow, Supplier<UUID> currentConversationSupplier) {
         this.parentWindow = parentWindow;
+        this.currentConversationSupplier = currentConversationSupplier;
     }
 
     @Override
@@ -46,6 +52,13 @@ public class NotificationManager implements IDatabaseObserver {
         boolean isMention = message.getText().contains("@" + currentUser.getUserTag());
 
         if (!isDM && !isMention) return;
+
+        // Ne pas notifier si l'utilisateur est déjà en train de lire cette conversation
+        UUID viewing = currentConversationSupplier != null ? currentConversationSupplier.get() : null;
+        if (viewing != null) {
+            if (isDM && message.getSender().getUuid().equals(viewing)) return;
+            if (isMention && message.getRecipient().equals(viewing)) return;
+        }
 
         // Construire le contenu de la notification
         String senderName = "@" + message.getSender().getUserTag();

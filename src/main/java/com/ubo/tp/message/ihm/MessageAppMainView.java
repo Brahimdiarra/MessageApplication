@@ -177,7 +177,8 @@ public class MessageAppMainView extends JFrame {
                 public void notifyChannelDeleted(Channel c)  { }
                 public void notifyChannelModified(Channel c) { }
             });
-            database.addObserver(new NotificationManager(this));
+            database.addObserver(new NotificationManager(this,
+                    sendPanel != null ? sendPanel::getCurrentRecipientUuid : () -> null));
             database.addObserver(new EasterEggManager(this));
             System.out.println("[INFO] Observateurs IHM enregistrés avec succès");
         } else {

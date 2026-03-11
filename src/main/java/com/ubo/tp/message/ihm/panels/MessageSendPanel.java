@@ -121,6 +121,9 @@ public class MessageSendPanel extends JPanel implements IDatabaseObserver {
         repaint();
     }
 
+    /** Retourne l'UUID du destinataire actuellement sélectionné (null si aucun). */
+    public UUID getCurrentRecipientUuid() { return currentRecipientUuid; }
+
     /** Réinitialise le destinataire (aucune conversation sélectionnée). */
     public void clearRecipient() {
         this.currentRecipientUuid = null;

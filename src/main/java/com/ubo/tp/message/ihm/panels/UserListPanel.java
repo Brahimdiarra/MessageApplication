@@ -34,6 +34,8 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
     private final Map<UUID, String> lastMessages = new HashMap<>();
     private UUID currentlyViewingUuid = null;
+    /** Horodatage de connexion — seuls les messages plus récents créent un badge. */
+    private long loginTime = System.currentTimeMillis();
 
     // ── Dark mode ─────────────────────────────────────────────────────────
     private boolean darkMode = false;
@@ -180,17 +182,20 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
             UUID myUuid = currentUser.getUuid();
             UUID sender = m.getSender().getUuid();
             UUID recipient = m.getRecipient();
+            boolean isNewMessage = m.getEmissionDate() >= loginTime;
 
             if (sender.equals(myUuid)) {
                 // Message que j'envoie à un utilisateur
                 boolean recipientIsUser = allUsers.stream().anyMatch(u -> u.getUuid().equals(recipient));
                 if (!recipientIsUser) return;
-                lastMessages.put(recipient, buildPreview(m, "Vous: "));
+                if (isNewMessage) lastMessages.put(recipient, buildPreview(m, "Vous: "));
             } else if (recipient.equals(myUuid)) {
                 // Message reçu d'un autre utilisateur
-                lastMessages.put(sender, buildPreview(m, ""));
-                if (!sender.equals(currentlyViewingUuid)) {
-                    unreadCounts.merge(sender, 1, Integer::sum);
+                if (isNewMessage) {
+                    lastMessages.put(sender, buildPreview(m, ""));
+                    if (!sender.equals(currentlyViewingUuid)) {
+                        unreadCounts.merge(sender, 1, Integer::sum);
+                    }
                 }
             } else {
                 return; // pas mon message DM
@@ -214,7 +219,10 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         User currentUser = SessionManager.getInstance().getCurrentUser();
         if (currentUser == null) return;
         UUID myUuid = currentUser.getUuid();
+        loginTime = System.currentTimeMillis(); // réinitialise à chaque connexion
         lastMessages.clear();
+        unreadCounts.clear();
+        currentlyViewingUuid = null;
         List<Message> sorted = new ArrayList<>(dm.getMessages());
         sorted.sort(Comparator.comparingLong(Message::getEmissionDate));
         for (Message m : sorted) {
