@@ -10,7 +10,6 @@ import main.java.com.ubo.tp.message.ihm.MessageApp;
 import main.java.com.ubo.tp.message.ihm.MessageAppMainView;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -79,25 +78,31 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
      */
     private void initComponents() {
         setLayout(new BorderLayout());
-        TitledBorder msgBorder = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(MessageAppMainView.COLOR_ACCENT, 1, true),
-                "Messages", TitledBorder.LEFT, TitledBorder.TOP);
-        msgBorder.setTitleColor(MessageAppMainView.COLOR_ACCENT);
-        msgBorder.setTitleFont(new Font("SansSerif", Font.BOLD, 12));
-        setBorder(msgBorder);
-        setBackground(MessageAppMainView.COLOR_BG);
+        setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        setBackground(MessageAppMainView.DISCORD_CHAT_BG);
 
         // ── HAUT : barre de recherche ─────────────────────────────────────────
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        JPanel searchPanel = new JPanel(new BorderLayout(6, 0));
+        searchPanel.setBackground(MessageAppMainView.DISCORD_CHAT_BG);
+        searchPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(32, 34, 37)),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher dans les messages (texte ou @auteur)");
+        searchField.setBackground(new Color(64, 68, 75));
+        searchField.setForeground(new Color(220, 221, 222));
+        searchField.setCaretColor(Color.WHITE);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(60, 63, 70), 1),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)));
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { applySearch(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { applySearch(); }
         });
-        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
+        JLabel searchIcon = new JLabel("🔍");
+        searchIcon.setForeground(new Color(148, 155, 164));
+        searchPanel.add(searchIcon, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
         add(searchPanel, BorderLayout.NORTH);
 
@@ -111,6 +116,9 @@ public class MessageListPanel extends JPanel implements IDatabaseObserver {
 
         // ScrollPane pour la liste
         JScrollPane scrollPane = new JScrollPane(messageList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(MessageAppMainView.DISCORD_CHAT_BG);
+        messageList.setBackground(MessageAppMainView.DISCORD_CHAT_BG);
         add(scrollPane, BorderLayout.CENTER);
 
         // Réactions : repaint à chaque changement dans le ReactionStore

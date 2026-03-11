@@ -341,19 +341,27 @@ public class MessageAppMainView extends JFrame {
      * Crée la barre d'en-tête colorée affichant l'utilisateur connecté.
      */
     private JPanel createHeaderPanel() {
-        JPanel header = new JPanel(new BorderLayout(10, 0));
-        header.setBackground(DISCORD_SIDEBAR_DARK);
+        JPanel header = new JPanel(new BorderLayout(10, 0)) {
+            @Override protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setPaint(new GradientPaint(0, 0, new Color(40, 43, 51), getWidth(), 0, new Color(28, 30, 36)));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        header.setOpaque(false);
         header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(20, 20, 20)),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)));
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(15, 15, 20)),
+                BorderFactory.createEmptyBorder(9, 16, 9, 16)));
 
         JLabel appLabel = new JLabel("💬  " + APP_TITLE);
         appLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
         appLabel.setForeground(Color.WHITE);
 
         headerUserLabel = new JLabel("");
-        headerUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        headerUserLabel.setForeground(DISCORD_TEXT_MUTED);
+        headerUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        headerUserLabel.setForeground(new Color(114, 137, 218)); // Discord blurple clair
 
         header.add(appLabel, BorderLayout.WEST);
         header.add(headerUserLabel, BorderLayout.EAST);
@@ -604,12 +612,12 @@ public class MessageAppMainView extends JFrame {
 
         // Header de conversation
         JPanel conversationHeader = new JPanel(new BorderLayout());
-        conversationHeader.setBackground(DISCORD_CHAT_BG);
+        conversationHeader.setBackground(new Color(44, 47, 53));
         conversationHeader.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(32, 34, 37)),
-                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(24, 26, 30)),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
         conversationTitleLabel = new JLabel("  Sélectionnez une conversation...");
-        conversationTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        conversationTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
         conversationTitleLabel.setForeground(DISCORD_TEXT_MUTED);
         conversationHeader.add(conversationTitleLabel, BorderLayout.WEST);
         centerPanel.add(conversationHeader, BorderLayout.NORTH);
@@ -684,11 +692,13 @@ public class MessageAppMainView extends JFrame {
     /** Crée un label de section style Discord (ex: "CANAUX"). */
     private JLabel makeSectionHeader(String text) {
         JLabel lbl = new JLabel(text);
-        lbl.setFont(new Font("SansSerif", Font.BOLD, 11));
-        lbl.setForeground(DISCORD_TEXT_MUTED);
-        lbl.setBorder(BorderFactory.createEmptyBorder(14, 14, 4, 14));
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        lbl.setForeground(new Color(148, 155, 164));
+        lbl.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(24, 26, 30)),
+                BorderFactory.createEmptyBorder(10, 14, 6, 14)));
         lbl.setOpaque(true);
-        lbl.setBackground(DISCORD_SIDEBAR);
+        lbl.setBackground(new Color(32, 34, 37));
         return lbl;
     }
 
@@ -700,13 +710,13 @@ public class MessageAppMainView extends JFrame {
 
         // En-tête
         JLabel header = new JLabel("  EN LIGNE");
-        header.setFont(new Font("SansSerif", Font.BOLD, 11));
-        header.setForeground(DISCORD_TEXT_MUTED);
+        header.setFont(new Font("SansSerif", Font.BOLD, 10));
+        header.setForeground(new Color(148, 155, 164));
         header.setOpaque(true);
-        header.setBackground(DISCORD_SIDEBAR_DARK);
+        header.setBackground(new Color(32, 34, 37));
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(20, 20, 20)),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
         panel.add(header, BorderLayout.NORTH);
 
         // Liste

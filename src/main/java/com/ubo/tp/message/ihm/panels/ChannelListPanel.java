@@ -32,6 +32,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
     private DataManager dataManager;
     private JLabel countLabel;
     private JTextField searchField;
+    private JPanel searchPanelContainer;
+    private JPanel channelBottomPanel;
 
     private final List<Channel> allChannels = new ArrayList<>();
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
@@ -69,6 +71,34 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
             channelList.setForeground(DARK_TEXT_ACT);
             channelList.setSelectionBackground(DARK_SEL);
             channelList.setSelectionForeground(Color.WHITE);
+            // Champ de recherche sombre
+            if (searchPanelContainer != null) {
+                searchPanelContainer.setBackground(DARK_BG);
+                for (Component c : searchPanelContainer.getComponents()) {
+                    if (c instanceof JLabel) ((JLabel) c).setForeground(DARK_TEXT);
+                }
+            }
+            if (searchField != null) {
+                searchField.setBackground(new Color(64, 68, 75));
+                searchField.setForeground(DARK_TEXT_ACT);
+                searchField.setCaretColor(Color.WHITE);
+                searchField.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(60, 63, 70), 1),
+                        BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+            }
+            // Bas du panneau en sombre
+            if (channelBottomPanel != null) {
+                channelBottomPanel.setBackground(new Color(32, 34, 37));
+                channelBottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(20, 20, 20)));
+                for (Component c : channelBottomPanel.getComponents()) {
+                    if (c instanceof JPanel) {
+                        ((JPanel) c).setOpaque(false);
+                        for (Component cc : ((JPanel) c).getComponents()) {
+                            if (cc instanceof JLabel) ((JLabel) cc).setForeground(DARK_TEXT);
+                        }
+                    }
+                }
+            }
         }
         repaint();
     }
@@ -124,8 +154,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         setBorder(channelBorder);
         setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        searchPanelContainer = new JPanel(new BorderLayout(5, 5));
+        searchPanelContainer.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher un canal par nom");
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -133,9 +163,11 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
         });
-        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        add(searchPanel, BorderLayout.NORTH);
+        JLabel searchIcon = new JLabel("🔍");
+        searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+        searchPanelContainer.add(searchIcon, BorderLayout.WEST);
+        searchPanelContainer.add(searchField, BorderLayout.CENTER);
+        add(searchPanelContainer, BorderLayout.NORTH);
 
         channelListModel = new DefaultListModel<>();
         channelList = new JList<>(channelListModel);
@@ -145,9 +177,9 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         channelList.setBackground(Color.WHITE);
         add(new JScrollPane(channelList), BorderLayout.CENTER);
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setBackground(new Color(248, 250, 252));
-        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
+        channelBottomPanel = new JPanel(new BorderLayout());
+        channelBottomPanel.setBackground(new Color(248, 250, 252));
+        channelBottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(203, 213, 225)));
 
         JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         infoPanel.setOpaque(false);
@@ -163,9 +195,9 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
         buttonsPanel.add(makeBtn("✏", "Modifier le canal sélectionné", MessageAppMainView.COLOR_ACCENT, () -> editSelectedChannel()));
         buttonsPanel.add(makeBtn("🗑", "Supprimer un canal", new Color(220, 38, 38), () -> deleteSelectedChannel()));
 
-        bottomPanel.add(infoPanel, BorderLayout.WEST);
-        bottomPanel.add(buttonsPanel, BorderLayout.EAST);
-        add(bottomPanel, BorderLayout.SOUTH);
+        channelBottomPanel.add(infoPanel, BorderLayout.WEST);
+        channelBottomPanel.add(buttonsPanel, BorderLayout.EAST);
+        add(channelBottomPanel, BorderLayout.SOUTH);
 
         channelListModel.addListDataListener(new javax.swing.event.ListDataListener() {
             public void intervalAdded(javax.swing.event.ListDataEvent e)   { updateCount(); }
@@ -320,7 +352,8 @@ public class ChannelListPanel extends JPanel implements IDatabaseObserver {
             int unread = unreadCounts.getOrDefault(channel.getUuid(), 0);
 
             if (darkMode) {
-                cell.setBackground(isSelected ? DARK_SEL : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT));
+                Color rowBg = isSelected ? new Color(79, 84, 92) : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT);
+                cell.setBackground(rowBg);
                 cell.setOpaque(true);
 
                 // Icône # ou 🔒

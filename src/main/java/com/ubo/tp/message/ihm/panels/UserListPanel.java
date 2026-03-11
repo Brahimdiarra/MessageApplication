@@ -29,6 +29,7 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
     private JList<User> userList;
     private JLabel countLabel;
     private JTextField searchField;
+    private JPanel searchPanelContainer;
 
     private final List<User> allUsers = new ArrayList<>();
     private final Map<UUID, Integer> unreadCounts = new HashMap<>();
@@ -69,6 +70,21 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
             userList.setForeground(DARK_TEXT_ACT);
             userList.setSelectionBackground(DARK_SEL);
             userList.setSelectionForeground(Color.WHITE);
+            // Champ de recherche sombre
+            if (searchPanelContainer != null) {
+                searchPanelContainer.setBackground(DARK_BG);
+                for (Component c : searchPanelContainer.getComponents()) {
+                    if (c instanceof JLabel) ((JLabel) c).setForeground(DARK_TEXT);
+                }
+            }
+            if (searchField != null) {
+                searchField.setBackground(new Color(64, 68, 75));
+                searchField.setForeground(DARK_TEXT_ACT);
+                searchField.setCaretColor(Color.WHITE);
+                searchField.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(60, 63, 70), 1),
+                        BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+            }
         }
         repaint();
     }
@@ -83,8 +99,8 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
         setBorder(userBorder);
         setBackground(MessageAppMainView.COLOR_PANEL_BG);
 
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        searchPanelContainer = new JPanel(new BorderLayout(5, 5));
+        searchPanelContainer.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         searchField = new JTextField();
         searchField.setToolTipText("Rechercher un utilisateur (@tag ou nom)");
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -92,9 +108,11 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
             public void removeUpdate(javax.swing.event.DocumentEvent e)  { applyFilter(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(); }
         });
-        searchPanel.add(new JLabel("🔍 "), BorderLayout.WEST);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        add(searchPanel, BorderLayout.NORTH);
+        JLabel searchIcon = new JLabel("🔍");
+        searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+        searchPanelContainer.add(searchIcon, BorderLayout.WEST);
+        searchPanelContainer.add(searchField, BorderLayout.CENTER);
+        add(searchPanelContainer, BorderLayout.NORTH);
 
         userListModel = new DefaultListModel<>();
         userList = new JList<>(userListModel);
@@ -269,7 +287,8 @@ public class UserListPanel extends JPanel implements IDatabaseObserver {
             int unread = unreadCounts.getOrDefault(user.getUuid(), 0);
 
             if (darkMode) {
-                cell.setBackground(isSelected ? DARK_SEL : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT));
+                Color rowBg = isSelected ? new Color(79, 84, 92) : (index % 2 == 0 ? DARK_BG : DARK_BG_ALT);
+                cell.setBackground(rowBg);
                 cell.setOpaque(true);
 
                 // Avatar avec initiale et pastille de statut
